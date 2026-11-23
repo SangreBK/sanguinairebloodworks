@@ -1,0 +1,26 @@
+{
+  "parent": "sanguinaire:root",
+  "display": {
+    "icon": {
+      "item": "sanguinaire:surgical_saw"
+    },
+    "title": {
+      "translate": "advancements.sanguinaire.bone_to_pick.title"
+    },
+    "description": {
+      "translate": "advancements.sanguinaire.bone_to_pick.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "saw": {
+      "trigger": "minecraft:recipe_crafted",
+      "conditions": {
+        "recipe_id": "sanguinaire:surgical_saw"
+      }
+    }
+  }
+}

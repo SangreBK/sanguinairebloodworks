@@ -1,0 +1,385 @@
+package com.sanguinaire.mutation;
+
+import com.sanguinaire.Sanguinaire;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.tags.DamageTypeTags;
+import net.minecraft.world.damagesource.CombatRules;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.MobSpawnType;
+import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.ai.goal.AvoidEntityGoal;
+import net.minecraft.world.entity.monster.Zombie;
+import net.minecraft.world.entity.monster.ZombieVillager;
+import net.minecraft.world.entity.npc.Villager;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.MerchantMenu;
+import net.minecraft.world.item.trading.MerchantOffer;
+import net.minecraftforge.event.entity.player.PlayerContainerEvent;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.event.ForgeEventFactory;
+import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.VanillaGameEvent;
+import net.minecraftforge.event.entity.EntityEvent;
+import net.minecraftforge.event.entity.EntityJoinLevelEvent;
+import net.minecraftforge.event.entity.living.LivingAttackEvent;
+import net.minecraftforge.event.entity.living.EnderManAngerEvent;
+import net.minecraftforge.event.entity.living.LivingChangeTargetEvent;
+import net.minecraftforge.event.entity.living.LivingDamageEvent;
+import net.minecraftforge.event.entity.living.LivingDeathEvent;
+import net.minecraftforge.event.entity.living.LivingEvent;
+import net.minecraftforge.event.entity.living.LivingFallEvent;
+import net.minecraftforge.event.entity.living.LivingHurtEvent;
+import net.minecraftforge.event.entity.living.MobEffectEvent;
+import net.minecraftforge.event.entity.living.ShieldBlockEvent;
+import net.minecraftforge.event.entity.player.AttackEntityEvent;
+import net.minecraftforge.eventbus.api.Event;
+import net.minecraftforge.eventbus.api.EventPriority;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.LogicalSide;
+import net.minecraftforge.fml.common.Mod;
+import org.jetbrains.annotations.Nullable;
+
+/** Forge-bus hooks for transformation ticking, death handling and event-driven passive traits. */
+@Mod.EventBusSubscriber(modid = Sanguinaire.MOD_ID)
+public final class TransformationEvents {
+    private static final int SHIELD_DISABLE_TICKS = 10 * 20;
+    private static final int NAUSEA_TICKS = 15 * 20;
+    private static final int FADE_INVISIBILITY_TICKS = 4 * 20;
+    private static final int FADE_BLINDNESS_TICKS = 8 * 20;
+    private static final int HUNGER_ON_HIT_TICKS = 3 * 20;
+    private static final int POISON_ON_HIT_TICKS = 8 * 20;
+    private static final int HUNGER_RESTORED_ON_KILL = 4;
+
+    private TransformationEvents() {
+    }
+
+    /** The player who dealt {@code source} with a direct melee hit, if any. */
+    @Nullable
+    private static Player meleeAttacker(DamageSource source) {
+        return source.getEntity() instanceof Player player && source.getDirectEntity() == player ? player : null;
+    }
+
+    // ---- Lifecycle -----------------------------------------------------------------------------------------------
+
+    @SubscribeEvent
+    public static void onPlayerTick(TickEvent.PlayerTickEvent event) {
+        if (event.phase == TickEvent.Phase.END && event.side == LogicalSide.SERVER && event.player instanceof ServerPlayer player) {
+            TransformationManager.tickPhysicalBoost(player);
+            TransformationManager.tick(player);
+        }
+    }
+
+    /** A transformation always ends on death (it still costs half a heart). Lowest priority: only real deaths. */
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    public static void onDeath(LivingDeathEvent event) {
+        if (event.getEntity().level().isClientSide()) {
+            return;
+        }
+        if (event.getEntity() instanceof ServerPlayer player) {
+            TransformationManager.end(player);
+        }
+        if (event.getSource().getEntity() instanceof Player killer
+                && TransformationManager.hasTrait(killer, MutationTrait.HUNGER_ON_KILL)) {
+            killer.getFoodData().eat(HUNGER_RESTORED_ON_KILL, 0.0F);
+        }
+    }
+
+    /** Zombie-family transformations turn the villagers they kill into Zombie Villagers (on every difficulty). */
+    @SubscribeEvent
+    public static void onVillagerKilled(LivingDeathEvent event) {
+        if (!(event.getEntity() instanceof Villager villager) || !(villager.level() instanceof ServerLevel level)) {
+            return;
+        }
+        if (!(event.getSource().getEntity() instanceof Player killer)
+                || !TransformationManager.hasTrait(killer, MutationTrait.ZOMBIFIES_VILLAGERS)) {
+            return;
+        }
+        if (!ForgeEventFactory.canLivingConvert(villager, EntityType.ZOMBIE_VILLAGER, timer -> {
+        })) {
+            return;
+        }
+        CompoundTag villagerData = new CompoundTag();
+        villager.addAdditionalSaveData(villagerData);
+
+        ZombieVillager zombieVillager = villager.convertTo(EntityType.ZOMBIE_VILLAGER, false);
+        if (zombieVillager == null) {
+            return;
+        }
+        zombieVillager.finalizeSpawn(level, level.getCurrentDifficultyAt(zombieVillager.blockPosition()),
+                MobSpawnType.CONVERSION, new Zombie.ZombieGroupData(false, true), null);
+        zombieVillager.setVillagerData(villager.getVillagerData());
+        Tag gossips = villagerData.get("Gossips");
+        if (gossips != null) {
+            zombieVillager.setGossips(gossips);
+        }
+        zombieVillager.setTradeOffers(villager.getOffers().createTag());
+        zombieVillager.setVillagerXp(villager.getVillagerXp());
+        ForgeEventFactory.onLivingConvert(villager, zombieVillager);
+        level.levelEvent(null, 1026, villager.blockPosition(), 0);
+        // The villager has been replaced; skip its death (and loot), exactly like vanilla zombie conversion.
+        event.setCanceled(true);
+    }
+
+    // ---- Targeting & attacking -----------------------------------------------------------------------------------
+
+    @SubscribeEvent
+    public static void onChangeTarget(LivingChangeTargetEvent event) {
+        if (event.getEntity() instanceof Mob mob && event.getNewTarget() instanceof Player player
+                && TransformationManager.ignoresPlayer(mob, player)) {
+            event.setCanceled(true);
+        }
+    }
+
+    @SubscribeEvent
+    public static void onAttackEntity(AttackEntityEvent event) {
+        if (TransformationManager.hasTrait(event.getEntity(), MutationTrait.CANNOT_ATTACK)) {
+            event.setCanceled(true);
+        }
+    }
+
+    @SubscribeEvent
+    public static void onEntityJoin(EntityJoinLevelEvent event) {
+        if (event.getLevel().isClientSide()) {
+            return;
+        }
+        Entity entity = event.getEntity();
+        if (entity instanceof PathfinderMob mob && TransformationManager.fearsWolfForm(mob)) {
+            mob.goalSelector.addGoal(1, new AvoidEntityGoal<>(mob, Player.class, 10.0F, 1.0D, 1.3D,
+                    target -> target instanceof Player player
+                            && TransformationManager.hasTrait(player, MutationTrait.FEARED_BY_SKELETONS_AND_SHEEP)));
+        }
+    }
+
+    // ---- Damage ----------------------------------------------------------------------------------------------------
+
+    @SubscribeEvent
+    public static void onLivingAttack(LivingAttackEvent event) {
+        if (!(event.getEntity() instanceof Player player) || player.level().isClientSide()) {
+            return;
+        }
+        DamageSource source = event.getSource();
+        // Cancelling makes the hit fail; vanilla arrows/tridents then bounce off.
+        if (source.is(DamageTypeTags.IS_PROJECTILE) && TransformationManager.hasTrait(player, MutationTrait.PROJECTILE_IMMUNE)) {
+            event.setCanceled(true);
+        } else if (source.is(DamageTypeTags.IS_FIRE) && TransformationManager.hasTrait(player, MutationTrait.FIRE_IMMUNE)) {
+            event.setCanceled(true);
+        } else if (MutationAbilities.isDashInvulnerable(player) && !source.is(DamageTypeTags.BYPASSES_INVULNERABILITY)) {
+            event.setCanceled(true); // Fade Hound: untouchable for a moment after its shadow dash
+        } else if (MutationAbilities.isFadeSplitInvulnerable(player) && !source.is(DamageTypeTags.BYPASSES_INVULNERABILITY)) {
+            event.setCanceled(true); // Fade Hound: untouchable while splitting into shadows after a hit
+        }
+    }
+
+    @SubscribeEvent
+    public static void onLivingHurt(LivingHurtEvent event) {
+        LivingEntity target = event.getEntity();
+        if (target.level().isClientSide()) {
+            return;
+        }
+        DamageSource source = event.getSource();
+
+        // Passives of the player being hit.
+        if (target instanceof Player victim) {
+            Entity attacker = source.getEntity();
+            if (attacker instanceof LivingEntity livingAttacker && attacker != victim) {
+                if (TransformationManager.hasTrait(victim, MutationTrait.NAUSEATES_ATTACKERS)) {
+                    livingAttacker.addEffect(new MobEffectInstance(MobEffects.CONFUSION, NAUSEA_TICKS, 1), victim);
+                }
+                if (TransformationManager.hasTrait(victim, MutationTrait.FADES_WHEN_HIT)) {
+                    livingAttacker.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, FADE_BLINDNESS_TICKS, 0), victim);
+                }
+            }
+            if (TransformationManager.hasTrait(victim, MutationTrait.FADES_WHEN_HIT) && victim instanceof ServerPlayer serverVictim) {
+                victim.addEffect(new MobEffectInstance(MobEffects.INVISIBILITY, FADE_INVISIBILITY_TICKS, 0, false, false, true));
+                LivingEntity blinded = attacker instanceof LivingEntity living && attacker != victim ? living : null;
+                MutationAbilities.startFadeSplit(serverVictim, blinded);
+            }
+        }
+
+        // Passives of the player dealing a melee hit.
+        Player attacker = meleeAttacker(source);
+        if (attacker == null || attacker == target) {
+            return;
+        }
+        if (TransformationManager.hasTrait(attacker, MutationTrait.HUNGER_ON_HIT)) {
+            target.addEffect(new MobEffectInstance(MobEffects.HUNGER, HUNGER_ON_HIT_TICKS, 1), attacker);
+        }
+        if (TransformationManager.hasTrait(attacker, MutationTrait.POISON_ON_HIT)) {
+            target.addEffect(new MobEffectInstance(MobEffects.POISON, POISON_ON_HIT_TICKS, 0), attacker);
+        }
+        if (TransformationManager.hasTrait(attacker, MutationTrait.ARMOR_PIERCING) && !source.is(DamageTypeTags.BYPASSES_ARMOR)) {
+            event.setAmount(compensateForArmor(target, event.getAmount()));
+        }
+    }
+
+    /**
+     * LivingHurtEvent fires before armor is applied. To make a hit ignore armor, find the pre-armor amount whose
+     * post-armor result equals the intended damage (vanilla's armor formula is monotonic, so bisection works).
+     */
+    private static float compensateForArmor(LivingEntity target, float intended) {
+        float armor = target.getArmorValue();
+        float toughness = (float) target.getAttributeValue(Attributes.ARMOR_TOUGHNESS);
+        if (armor <= 0.0F || intended <= 0.0F) {
+            return intended;
+        }
+        float low = intended;
+        float high = intended * 10.0F; // armor reduces damage by at most 80%
+        for (int i = 0; i < 24; i++) {
+            float mid = (low + high) * 0.5F;
+            if (CombatRules.getDamageAfterAbsorb(mid, armor, toughness) < intended) {
+                low = mid;
+            } else {
+                high = mid;
+            }
+        }
+        return high;
+    }
+
+    /** Rotting Abomination: at full health, a single hit leaves you on half a heart instead of killing you. */
+    @SubscribeEvent(priority = EventPriority.LOW)
+    public static void onLivingDamage(LivingDamageEvent event) {
+        if (event.getEntity() instanceof Player player && !player.level().isClientSide()
+                && TransformationManager.hasTrait(player, MutationTrait.SURVIVES_ONE_HIT)
+                && player.getHealth() >= player.getMaxHealth()
+                && event.getAmount() >= player.getHealth()) {
+            event.setAmount(Math.max(0.0F, player.getHealth() - 1.0F));
+        }
+    }
+
+    @SubscribeEvent
+    public static void onFall(LivingFallEvent event) {
+        if (!(event.getEntity() instanceof Player player)) {
+            return;
+        }
+        if (TransformationManager.isNightHunting(player)) {
+            event.setDistance(Math.max(0.0F, event.getDistance() - 1.0F)); // Jump Boost I's fall allowance
+        }
+        if (TransformationManager.hasTrait(player, MutationTrait.FALL_DAMAGE_IMMUNE)) {
+            event.setDamageMultiplier(0.0F);
+        } else if (TransformationManager.hasTrait(player, MutationTrait.HALF_FALL_DAMAGE)) {
+            event.setDamageMultiplier(event.getDamageMultiplier() * 0.5F);
+        }
+    }
+
+    /** Fraction knocked off every villager trade's price for Villager-form players (at least one item off). */
+    public static final double VILLAGER_DISCOUNT = 0.30D;
+
+    /**
+     * Villager-form players get a discount on every trade. Applied when the trading screen opens, after the villager
+     * has worked out its reputation prices and before the offers are sent; the villager resets its prices when the
+     * trade closes, so the discount never sticks or stacks.
+     */
+    @SubscribeEvent
+    public static void onMerchantOpen(PlayerContainerEvent.Open event) {
+        if (!(event.getContainer() instanceof MerchantMenu) || !(event.getEntity() instanceof ServerPlayer player)
+                || TransformationManager.getActive(player) != MutationType.VILLAGER) {
+            return;
+        }
+        for (Villager villager : player.level().getEntitiesOfClass(Villager.class, player.getBoundingBox().inflate(16.0D),
+                v -> v.getTradingPlayer() == player)) {
+            for (MerchantOffer offer : villager.getOffers()) {
+                int discount = (int) Math.floor(VILLAGER_DISCOUNT * offer.getBaseCostA().getCount());
+                offer.addToSpecialPriceDiff(-Math.max(discount, 1));
+            }
+        }
+    }
+
+    /** Endermen in Enderman form don't get angry when you look at them (no stare, scream or attack). */
+    @SubscribeEvent
+    public static void onEnderManAnger(EnderManAngerEvent event) {
+        if (TransformationManager.getActive(event.getPlayer()) == MutationType.ENDERMAN) {
+            event.setCanceled(true);
+        }
+    }
+
+    @SubscribeEvent
+    public static void onShieldBlock(ShieldBlockEvent event) {
+        Player attacker = meleeAttacker(event.getDamageSource());
+        if (attacker == null || !TransformationManager.hasTrait(attacker, MutationTrait.DISABLES_SHIELDS)) {
+            return;
+        }
+        LivingEntity blocker = event.getEntity();
+        if (blocker.level().isClientSide()) {
+            return;
+        }
+        if (blocker instanceof Player blockingPlayer) {
+            Item shield = blockingPlayer.getUseItem().getItem();
+            blockingPlayer.getCooldowns().addCooldown(shield, SHIELD_DISABLE_TICKS);
+            blockingPlayer.stopUsingItem();
+            blockingPlayer.level().broadcastEntityEvent(blockingPlayer, (byte) 30);
+        } else {
+            blocker.stopUsingItem();
+        }
+    }
+
+    // ---- Hitbox -------------------------------------------------------------------------------------------------
+
+    /**
+     * Transformed players take the creature's hitbox and eye height (in every pose). Fires on both sides whenever
+     * dimensions are refreshed; {@link TransformationManager} and the client sync handler call
+     * {@code refreshDimensions()} when a transformation starts or ends so both sides always agree.
+     */
+    @SubscribeEvent
+    public static void onEntitySize(EntityEvent.Size event) {
+        if (event.getEntity() instanceof Player player) {
+            MutationType type = TransformationManager.getActive(player);
+            if (type != null) {
+                event.setNewSize(type.getDimensions());
+                event.setNewEyeHeight(type.getEyeHeight());
+            }
+        }
+    }
+
+    // ---- Movement, effects, vibrations ---------------------------------------------------------------------------
+
+    /** Fires on the client for the local player too; the synced capability lets both sides agree. */
+    @SubscribeEvent
+    public static void onJump(LivingEvent.LivingJumpEvent event) {
+        if (event.getEntity() instanceof Player player && TransformationManager.hasTrait(player, MutationTrait.CANNOT_JUMP)) {
+            Vec3 motion = player.getDeltaMovement();
+            player.setDeltaMovement(motion.x, Math.min(motion.y, 0.0D), motion.z);
+        }
+    }
+
+    @SubscribeEvent
+    public static void onEffectApplicable(MobEffectEvent.Applicable event) {
+        if (event.getEntity() instanceof Player player
+                && event.getEffectInstance().getEffect() == MobEffects.MOVEMENT_SLOWDOWN
+                && TransformationManager.hasTrait(player, MutationTrait.SLOWNESS_IMMUNE)) {
+            event.setResult(Event.Result.DENY);
+        }
+        // Wardens (and their shriekers) don't darken one of their own.
+        if (event.getEntity() instanceof Player player
+                && event.getEffectInstance().getEffect() == MobEffects.DARKNESS
+                && TransformationManager.hasTrait(player, MutationTrait.IGNORED_BY_WARDENS)) {
+            event.setResult(Event.Result.DENY);
+        }
+    }
+
+    /** Night Hunter's Jump Boost I (+0.1 jump power), without a visible effect. Runs where the jump is simulated. */
+    @SubscribeEvent
+    public static void onNightHunterJump(LivingEvent.LivingJumpEvent event) {
+        if (event.getEntity() instanceof Player player && TransformationManager.isNightHunting(player)) {
+            player.setDeltaMovement(player.getDeltaMovement().add(0.0D, 0.1D, 0.0D));
+        }
+    }
+
+    @SubscribeEvent
+    public static void onGameEvent(VanillaGameEvent event) {
+        if (event.getCause() instanceof Player player && TransformationManager.hasTrait(player, MutationTrait.NO_VIBRATIONS)) {
+            event.setCanceled(true);
+        }
+    }
+}

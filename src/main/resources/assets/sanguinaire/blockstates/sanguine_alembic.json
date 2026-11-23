@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "sanguinaire:block/sanguine_alembic"
+    },
+    "facing=east": {
+      "model": "sanguinaire:block/sanguine_alembic",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "sanguinaire:block/sanguine_alembic",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "sanguinaire:block/sanguine_alembic",
+      "y": 270
+    }
+  }
+}

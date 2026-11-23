@@ -1,0 +1,26 @@
+{
+  "parent": "sanguinaire:serum_synthesizer",
+  "display": {
+    "icon": {
+      "item": "sanguinaire:sanguine_alembic"
+    },
+    "title": {
+      "translate": "advancements.sanguinaire.sanguine_alembic.title"
+    },
+    "description": {
+      "translate": "advancements.sanguinaire.sanguine_alembic.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "crafted": {
+      "trigger": "minecraft:recipe_crafted",
+      "conditions": {
+        "recipe_id": "sanguinaire:sanguine_alembic"
+      }
+    }
+  }
+}

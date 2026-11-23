@@ -1,0 +1,26 @@
+{
+  "serum_inject": {
+    "subtitle": "subtitles.sanguinaire.serum_inject",
+    "sounds": [
+      { "name": "minecraft:entity.bee.sting", "type": "event" }
+    ]
+  },
+  "serum_heartbeat": {
+    "subtitle": "subtitles.sanguinaire.serum_heartbeat",
+    "sounds": [
+      { "name": "minecraft:entity.warden.heartbeat", "type": "event" }
+    ]
+  },
+  "transformation_crack": {
+    "subtitle": "subtitles.sanguinaire.transformation_crack",
+    "sounds": [
+      { "name": "minecraft:block.bone_block.break", "type": "event" }
+    ]
+  },
+  "transformation_burst": {
+    "subtitle": "subtitles.sanguinaire.transformation_burst",
+    "sounds": [
+      { "name": "minecraft:entity.elder_guardian.curse", "type": "event" }
+    ]
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "parent": "sanguinaire:first_transformation",
+  "display": {
+    "icon": {
+      "item": "minecraft:emerald"
+    },
+    "title": {
+      "translate": "advancements.sanguinaire.inside_trader.title"
+    },
+    "description": {
+      "translate": "advancements.sanguinaire.inside_trader.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

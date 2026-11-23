@@ -1,0 +1,8 @@
+{
+  "replace": false,
+  "values": [
+    "sanguinaire:empty_syringe",
+    "sanguinaire:serum",
+    "sanguinaire:blood_sample"
+  ]
+}

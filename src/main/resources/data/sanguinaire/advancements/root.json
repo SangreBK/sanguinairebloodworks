@@ -1,0 +1,32 @@
+{
+  "display": {
+    "icon": {
+      "item": "sanguinaire:surgical_journal"
+    },
+    "title": {
+      "translate": "advancements.sanguinaire.root.title"
+    },
+    "description": {
+      "translate": "advancements.sanguinaire.root.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false,
+    "background": "minecraft:textures/block/nether_wart_block.png"
+  },
+  "criteria": {
+    "journal": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "sanguinaire:surgical_journal"
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

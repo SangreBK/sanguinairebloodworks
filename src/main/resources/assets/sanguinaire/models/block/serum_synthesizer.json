@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/orientable",
+  "textures": {
+    "top": "sanguinaire:block/serum_synthesizer_top",
+    "front": "sanguinaire:block/serum_synthesizer_front",
+    "side": "sanguinaire:block/serum_synthesizer_side"
+  }
+}

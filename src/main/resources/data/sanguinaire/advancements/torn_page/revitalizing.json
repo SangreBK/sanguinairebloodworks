@@ -1,0 +1,23 @@
+{
+  "parent": "sanguinaire:root",
+  "display": {
+    "icon": {
+      "item": "sanguinaire:torn_page"
+    },
+    "title": {
+      "translate": "advancements.sanguinaire.torn_page.revitalizing.title"
+    },
+    "description": {
+      "translate": "advancements.sanguinaire.torn_page.revitalizing.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

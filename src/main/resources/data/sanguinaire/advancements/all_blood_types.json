@@ -1,0 +1,24 @@
+{
+  "parent": "sanguinaire:root",
+  "display": {
+    "icon": {
+      "item": "sanguinaire:blood_sample",
+      "nbt": "{BloodType:\"humanoid\"}"
+    },
+    "title": {
+      "translate": "advancements.sanguinaire.all_blood_types.title"
+    },
+    "description": {
+      "translate": "advancements.sanguinaire.all_blood_types.description"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

@@ -1,0 +1,89 @@
+{
+  "replace": false,
+  "values": [
+    {
+      "id": "minecraft:mob_attack",
+      "required": false
+    },
+    {
+      "id": "minecraft:mob_attack_no_aggro",
+      "required": false
+    },
+    {
+      "id": "minecraft:player_attack",
+      "required": false
+    },
+    {
+      "id": "minecraft:arrow",
+      "required": false
+    },
+    {
+      "id": "minecraft:trident",
+      "required": false
+    },
+    {
+      "id": "minecraft:mob_projectile",
+      "required": false
+    },
+    {
+      "id": "minecraft:thrown",
+      "required": false
+    },
+    {
+      "id": "minecraft:falling_block",
+      "required": false
+    },
+    {
+      "id": "minecraft:falling_anvil",
+      "required": false
+    },
+    {
+      "id": "minecraft:falling_stalactite",
+      "required": false
+    },
+    {
+      "id": "minecraft:stalagmite",
+      "required": false
+    },
+    {
+      "id": "minecraft:fall",
+      "required": false
+    },
+    {
+      "id": "minecraft:fly_into_wall",
+      "required": false
+    },
+    {
+      "id": "minecraft:cramming",
+      "required": false
+    },
+    {
+      "id": "minecraft:cactus",
+      "required": false
+    },
+    {
+      "id": "minecraft:sweet_berry_bush",
+      "required": false
+    },
+    {
+      "id": "minecraft:sting",
+      "required": false
+    },
+    {
+      "id": "minecraft:explosion",
+      "required": false
+    },
+    {
+      "id": "minecraft:player_explosion",
+      "required": false
+    },
+    {
+      "id": "minecraft:fireworks",
+      "required": false
+    },
+    {
+      "id": "minecraft:generic",
+      "required": false
+    }
+  ]
+}

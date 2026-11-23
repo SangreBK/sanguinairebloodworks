@@ -1,0 +1,23 @@
+{
+  "parent": "sanguinaire:first_transformation",
+  "display": {
+    "icon": {
+      "item": "minecraft:gunpowder"
+    },
+    "title": {
+      "translate": "advancements.sanguinaire.aw_man.title"
+    },
+    "description": {
+      "translate": "advancements.sanguinaire.aw_man.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

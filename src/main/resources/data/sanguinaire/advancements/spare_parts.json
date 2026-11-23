@@ -1,0 +1,30 @@
+{
+  "parent": "sanguinaire:bone_to_pick",
+  "display": {
+    "icon": {
+      "item": "sanguinaire:foul_stomach"
+    },
+    "title": {
+      "translate": "advancements.sanguinaire.spare_parts.title"
+    },
+    "description": {
+      "translate": "advancements.sanguinaire.spare_parts.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "part": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "tag": "sanguinaire:body_parts"
+          }
+        ]
+      }
+    }
+  }
+}

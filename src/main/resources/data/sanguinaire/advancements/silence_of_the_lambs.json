@@ -1,0 +1,26 @@
+{
+  "parent": "sanguinaire:first_transformation",
+  "display": {
+    "icon": {
+      "item": "minecraft:goat_horn"
+    },
+    "title": {
+      "translate": "advancements.sanguinaire.silence_of_the_lambs.title"
+    },
+    "description": {
+      "translate": "advancements.sanguinaire.silence_of_the_lambs.description"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "rewards": {
+    "experience": 100
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "parent": "sanguinaire:spare_parts",
+  "display": {
+    "icon": {
+      "item": "sanguinaire:serum",
+      "nbt": "{Mutation:\"zombie\"}"
+    },
+    "title": {
+      "translate": "advancements.sanguinaire.first_transformation.title"
+    },
+    "description": {
+      "translate": "advancements.sanguinaire.first_transformation.description"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

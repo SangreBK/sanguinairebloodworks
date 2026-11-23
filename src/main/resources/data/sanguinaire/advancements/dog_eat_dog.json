@@ -1,0 +1,26 @@
+{
+  "parent": "sanguinaire:first_transformation",
+  "display": {
+    "icon": {
+      "item": "minecraft:saddle"
+    },
+    "title": {
+      "translate": "advancements.sanguinaire.dog_eat_dog.title"
+    },
+    "description": {
+      "translate": "advancements.sanguinaire.dog_eat_dog.description"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "rewards": {
+    "experience": 100
+  }
+}

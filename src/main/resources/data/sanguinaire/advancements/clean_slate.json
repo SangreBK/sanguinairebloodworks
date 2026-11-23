@@ -1,0 +1,23 @@
+{
+  "parent": "sanguinaire:first_transformation",
+  "display": {
+    "icon": {
+      "item": "minecraft:totem_of_undying"
+    },
+    "title": {
+      "translate": "advancements.sanguinaire.clean_slate.title"
+    },
+    "description": {
+      "translate": "advancements.sanguinaire.clean_slate.description"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

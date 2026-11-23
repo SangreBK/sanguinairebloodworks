@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/orientable",
+  "textures": {
+    "top": "sanguinaire:block/sanguine_alembic_top",
+    "front": "sanguinaire:block/sanguine_alembic_front",
+    "side": "sanguinaire:block/sanguine_alembic_side"
+  }
+}

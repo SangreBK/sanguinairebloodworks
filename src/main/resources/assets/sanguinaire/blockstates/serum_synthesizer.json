@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "sanguinaire:block/serum_synthesizer"
+    },
+    "facing=east": {
+      "model": "sanguinaire:block/serum_synthesizer",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "sanguinaire:block/serum_synthesizer",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "sanguinaire:block/serum_synthesizer",
+      "y": 270
+    }
+  }
+}

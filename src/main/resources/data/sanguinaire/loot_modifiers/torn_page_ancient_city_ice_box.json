@@ -1,0 +1,13 @@
+{
+  "type": "sanguinaire:add_torn_page",
+  "conditions": [
+    {
+      "condition": "forge:loot_table_id",
+      "loot_table_id": "minecraft:chests/ancient_city_ice_box"
+    },
+    {
+      "condition": "minecraft:random_chance",
+      "chance": 0.04
+    }
+  ]
+}

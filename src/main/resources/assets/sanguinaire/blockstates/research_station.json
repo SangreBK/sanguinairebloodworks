@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "sanguinaire:block/research_station"
+    },
+    "facing=east": {
+      "model": "sanguinaire:block/research_station",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "sanguinaire:block/research_station",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "sanguinaire:block/research_station",
+      "y": 270
+    }
+  }
+}
