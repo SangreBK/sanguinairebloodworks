@@ -1,5 +1,7 @@
 package com.sanguinaire.mutation;
 
+import net.minecraftforge.event.entity.living.LivingKnockBackEvent;
+
 import net.minecraft.sounds.SoundSource;
 
 import net.minecraft.sounds.SoundEvents;
@@ -406,6 +408,24 @@ public final class TransformationEvents {
     public static void onHighJump(LivingEvent.LivingJumpEvent event) {
         if (event.getEntity() instanceof Player player && TransformationManager.hasTrait(player, MutationTrait.HIGH_JUMP)) {
             player.setDeltaMovement(player.getDeltaMovement().add(0.0D, HIGH_JUMP_BONUS, 0.0D));
+        }
+    }
+
+    /**
+     * Heavy blows: knockback dealt by a form with a {@link MutationType#getKnockbackBonus() knockback bonus} is
+     * strengthened. The knockback event carries no attacker, but vanilla records the attacker on the victim just
+     * before knocking it back, in the same tick.
+     */
+    @SubscribeEvent
+    public static void onKnockBack(LivingKnockBackEvent event) {
+        LivingEntity victim = event.getEntity();
+        if (victim.level().isClientSide() || !(victim.getLastHurtByMob() instanceof Player attacker)
+                || victim.getLastHurtByMobTimestamp() != victim.tickCount) {
+            return;
+        }
+        MutationType type = TransformationManager.getActive(attacker);
+        if (type != null && type.getKnockbackBonus() > 0.0F) {
+            event.setStrength(event.getStrength() + type.getKnockbackBonus());
         }
     }
 

@@ -367,6 +367,14 @@ public enum MutationType {
         return this == GOATMAN ? 0.5D : 0.0D;
     }
 
+    /**
+     * Extra knockback strength added to everything this form hits (vanilla's base knockback is 0.4; each level of
+     * the Knockback enchantment adds 0.5). The Rotting Abomination's blows send things flying.
+     */
+    public float getKnockbackBonus() {
+        return this == ROTTING_ABOMINATION ? 1.5F : 0.0F;
+    }
+
     /** Eye height for the transformed hitbox: vanilla's default for living entities (85% of the height). */
     public float getEyeHeight() {
         return getDimensions().height * 0.85F;

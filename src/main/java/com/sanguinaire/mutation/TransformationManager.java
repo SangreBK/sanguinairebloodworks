@@ -482,6 +482,7 @@ public final class TransformationManager {
         if (reach != null) {
             reach.removeModifier(REACH_ID);
         }
+
         if (player.getHealth() > player.getMaxHealth()) {
             player.setHealth(player.getMaxHealth());
         }
