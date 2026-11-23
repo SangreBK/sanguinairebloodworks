@@ -29,7 +29,7 @@ import java.util.Set;
  * The {@link #getId() id} is the gameplay identifier stored in serum NBT; it must never change once released.
  */
 public enum MutationType {
-    GOATMAN("goatman", 0x7A5230, 60, ModItems.GOAT_FUR, ModItems.SHARP_FANGS, ModItems.FOUL_STOMACH),
+    GOATMAN("goatman", 0x7A5230, 60, ModItems.GOAT_FUR, ModItems.TWISTED_FANG, ModItems.FOUL_STOMACH),
     ROTTING_ABOMINATION("rotting_abomination", 0x6B7A2E, 60, ModItems.DRIED_HEART, ModItems.DECAYED_HEART, ModItems.SOAKED_HEART),
     FADEHOUND("fadehound", 0x7B3FC4, 60, ModItems.CHITIN_PLATE, ModItems.CANINE_TONGUE, ModItems.NULL_RESIDUE),
     CREEPER("creeper", 0x56C23F, 30, ModItems.CREEPER_HEART, ModItems.FUSE_SPINE, ModItems.VOLATILE_FRONDS),
