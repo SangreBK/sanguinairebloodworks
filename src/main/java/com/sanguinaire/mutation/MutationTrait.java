@@ -23,6 +23,8 @@ public enum MutationTrait {
     MONSTROUS,
     /** Wardens never anger at, target or darken you. */
     IGNORED_BY_WARDENS,
+    /** Illagers, witches and ravagers (every raider) treat the player as one of their own. */
+    IGNORED_BY_ILLAGERS,
     /** Fall damage is halved. */
     HALF_FALL_DAMAGE,
     /** You never take fall damage. */

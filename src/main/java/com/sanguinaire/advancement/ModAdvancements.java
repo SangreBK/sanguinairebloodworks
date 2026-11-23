@@ -14,6 +14,7 @@ import net.minecraft.world.entity.npc.AbstractVillager;
 import net.minecraft.world.entity.projectile.LargeFireball;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.monster.Ravager;
+import net.minecraft.world.entity.animal.IronGolem;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.player.TradeWithVillagerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -41,6 +42,7 @@ public final class ModAdvancements {
     public static final String SILENCE_OF_THE_LAMBS = "silence_of_the_lambs";
     public static final String ACID_REFLUX = "acid_reflux";
     public static final String DOG_EAT_DOG = "dog_eat_dog";
+    public static final String RUST_IN_PEACE = "rust_in_peace";
 
     private ModAdvancements() {
     }
@@ -106,6 +108,10 @@ public final class ModAdvancements {
         // "Dog Eat Dog": a Ravager brought down by a Fade Hound.
         if (event.getEntity() instanceof Ravager && active == MutationType.FADEHOUND) {
             grant(player, DOG_EAT_DOG);
+        }
+        // "Rust in Peace": an Iron Golem brought down by a Ravager.
+        if (event.getEntity() instanceof IronGolem && active == MutationType.RAVAGER) {
+            grant(player, RUST_IN_PEACE);
         }
     }
 }

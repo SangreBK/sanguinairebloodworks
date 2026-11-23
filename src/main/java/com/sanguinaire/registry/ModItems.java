@@ -45,7 +45,7 @@ public final class ModItems {
 
     /** Research guide; reads the owner's own per-player research. */
     public static final RegistryObject<SurgicalJournalItem> SURGICAL_JOURNAL = ITEMS.register("surgical_journal",
-            () -> new SurgicalJournalItem(new Item.Properties().rarity(Rarity.UNCOMMON).stacksTo(1)));
+            () -> new SurgicalJournalItem(new Item.Properties().stacksTo(1)));
 
     /** Uncommon research notes from Ancient Cities; unlock a utility serum's journal entry. */
     public static final RegistryObject<TornPageItem> TORN_PAGE = ITEMS.register("torn_page",
@@ -103,13 +103,17 @@ public final class ModItems {
     public static final RegistryObject<Item> DENSE_RIB = bodyPart("dense_rib");
     public static final RegistryObject<Item> RESONATING_ANTLER = bodyPart("resonating_antler");
     public static final RegistryObject<Item> BOOMING_DIAPHRAGM = bodyPart("booming_diaphragm");
+    // Ravager and illagers
+    public static final RegistryObject<Item> ILLAGER_NOSE = bodyPart("illager_nose");
+    public static final RegistryObject<Item> TOUGH_FLESH = bodyPart("tough_flesh");
+    public static final RegistryObject<Item> GIANT_TOOTH = bodyPart("giant_tooth");
 
     private ModItems() {
     }
 
     /** Body parts stack to 16. */
     private static RegistryObject<Item> bodyPart(String name) {
-        RegistryObject<Item> item = ITEMS.register(name, () -> new Item(new Item.Properties().rarity(Rarity.UNCOMMON).stacksTo(16)));
+        RegistryObject<Item> item = ITEMS.register(name, () -> new Item(new Item.Properties().stacksTo(16)));
         BODY_PART_LIST.add(item);
         return item;
     }

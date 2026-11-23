@@ -1,5 +1,11 @@
 package com.sanguinaire.mutation;
 
+import net.minecraft.world.entity.decoration.ArmorStand;
+
+import net.minecraft.world.entity.TamableAnimal;
+
+import net.minecraft.world.entity.raid.Raider;
+
 import com.sanguinaire.config.SanguinaireConfig;
 
 import com.sanguinaire.advancement.ModAdvancements;
@@ -82,6 +88,14 @@ public final class MutationAbilities {
     private static final String COOLDOWN_ROAR = "roar";
     private static final String COOLDOWN_VOMIT = "vomit";
     private static final String COOLDOWN_DASH = "dash";
+    private static final String COOLDOWN_RAVAGER_ROAR = "ravager_roar";
+    private static final int RAVAGER_ROAR_COOLDOWN_TICKS = 15 * 20;
+    private static final double RAVAGER_ROAR_RADIUS = 5.0D;
+    /** Vanilla's Ravager roar pushes with 4.0, divided by the squared distance (nearer is thrown harder). */
+    private static final double RAVAGER_ROAR_STRENGTH = 4.0D;
+    private static final double RAVAGER_ROAR_MAX_PUSH = 2.5D;
+    /** Same as the vanilla Ravager's roar. */
+    private static final float RAVAGER_ROAR_DAMAGE = 6.0F;
 
     private static final double ROAR_RADIUS = 8.0D;
     private static final int ROAR_STUN_TICKS = 20;             // Slowness VI for 1 s
@@ -117,6 +131,9 @@ public final class MutationAbilities {
     public static final int ANIMATION_FADEHOUND_SPLIT = 5;
     /** Serum injected: the build-up before a transformation (see {@link TransformationSequence}). */
     public static final int ANIMATION_SERUM_INJECT = 6;
+    /** Ravager roar: the puppet's mouth opens wide (Ravager#getRoarTick). */
+    public static final int ANIMATION_RAVAGER_ROAR = 7;
+    public static final int RAVAGER_ROAR_ANIMATION_TICKS = 20;
     /** How long the split lasts; the hound cannot be hurt for this long. */
     public static final int FADE_SPLIT_TICKS = 20;
     /** Hostile mobs one roar must stun for "Silence of the Lambs". */
@@ -168,6 +185,7 @@ public final class MutationAbilities {
             case GOATMAN -> roar(player);
             case ROTTING_ABOMINATION -> vomit(player);
             case FADEHOUND -> shadowDash(player);
+            case RAVAGER -> ravagerRoar(player);
             default -> {
                 // This transformation has no active ability.
             }
@@ -177,7 +195,7 @@ public final class MutationAbilities {
     public static boolean hasActiveAbility(MutationType type) {
         return switch (type) {
             case CREEPER, WARDEN, ENDERMAN, GHAST, GUARDIAN, ELDER_GUARDIAN, VILLAGER,
-                 GOATMAN, ROTTING_ABOMINATION, FADEHOUND -> true;
+                 GOATMAN, ROTTING_ABOMINATION, FADEHOUND, RAVAGER -> true;
             default -> false;
         };
     }
@@ -428,7 +446,43 @@ public final class MutationAbilities {
         }
     }
 
-    // ---- Goatman ------------------------------------------------------------------------------------------------
+    // ---- Ravager ----------------------------------------------------------------------------------------------
+
+    /**
+     * The Ravager's roar: everything around the player is thrown back, like the vanilla Ravager's roar after its
+     * stun (nearer creatures fly further), taking 6 damage. Raiders, allies and the player's own pets are spared.
+     */
+    private static void ravagerRoar(ServerPlayer player) {
+        if (!checkCooldown(player, COOLDOWN_RAVAGER_ROAR)) {
+            return;
+        }
+        startCooldown(player, COOLDOWN_RAVAGER_ROAR, RAVAGER_ROAR_COOLDOWN_TICKS);
+        if (!(player.level() instanceof ServerLevel level)) {
+            return;
+        }
+        for (LivingEntity target : level.getEntitiesOfClass(LivingEntity.class, player.getBoundingBox().inflate(RAVAGER_ROAR_RADIUS),
+                entity -> entity != player && entity.isAlive() && entity.distanceToSqr(player) <= RAVAGER_ROAR_RADIUS * RAVAGER_ROAR_RADIUS)) {
+            if (target instanceof Raider || player.isAlliedTo(target)
+                    || (target instanceof TamableAnimal pet && pet.isOwnedBy(player))
+                    || (target instanceof ArmorStand stand && stand.isMarker())) {
+                continue;
+            }
+            double dx = target.getX() - player.getX();
+            double dz = target.getZ() - player.getZ();
+            double distanceSqr = Math.max(dx * dx + dz * dz, 0.001D);
+            double push = Math.min(RAVAGER_ROAR_STRENGTH / distanceSqr, RAVAGER_ROAR_MAX_PUSH);
+            double length = Math.sqrt(distanceSqr);
+            target.hurt(level.damageSources().playerAttack(player), RAVAGER_ROAR_DAMAGE);
+            target.push(dx / length * push, 0.2D, dz / length * push);
+            target.hurtMarked = true; // send the new velocity (players move themselves)
+        }
+        Vec3 center = player.getBoundingBox().getCenter();
+        level.sendParticles(ParticleTypes.POOF, center.x, center.y, center.z, 40, 1.2D, 0.6D, 1.2D, 0.1D);
+        level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.RAVAGER_ROAR, SoundSource.PLAYERS, 1.0F, 1.0F);
+        ModNetwork.playAbilityAnimation(player, ANIMATION_RAVAGER_ROAR, RAVAGER_ROAR_ANIMATION_TICKS);
+    }
+
+    // ---- Goatman ----------------------------------------------------------------------------------------------
 
     /** A bellowing roar: every mob nearby is stunned (Slowness VI, 1 s) and enfeebled (Weakness II, 5 s). */
     private static void roar(ServerPlayer player) {

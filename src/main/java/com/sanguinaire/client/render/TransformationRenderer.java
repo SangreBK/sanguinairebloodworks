@@ -30,6 +30,7 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.monster.ElderGuardian;
 import net.minecraft.world.entity.monster.Ghast;
 import net.minecraft.world.entity.monster.Guardian;
+import net.minecraft.world.entity.monster.Ravager;
 import net.minecraft.world.entity.monster.warden.Warden;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
@@ -116,6 +117,13 @@ public final class TransformationRenderer {
 
     /** Called when the server announces an ability wind-up (Ghast shot, Warden sonic boom). */
     public static void playAnimation(int playerId, int kind, long gameTime, int durationTicks) {
+        if (kind == MutationAbilities.ANIMATION_RAVAGER_ROAR) {
+            Puppet puppet = PUPPETS.get(playerId);
+            if (puppet != null && puppet.entity() instanceof PuppetRavager ravager) {
+                ravager.roarTicks = durationTicks;
+            }
+            return;
+        }
         if (kind == MutationAbilities.ANIMATION_FADEHOUND_SPLIT) {
             FADE_SPLITS.put(playerId, gameTime);
             return;
@@ -202,6 +210,9 @@ public final class TransformationRenderer {
         }
         if (appearance == EntityType.ELDER_GUARDIAN) {
             return new PuppetElderGuardian(level);
+        }
+        if (appearance == EntityType.RAVAGER) {
+            return new PuppetRavager(level);
         }
         return appearance.create(level);
     }
@@ -488,6 +499,54 @@ public final class TransformationRenderer {
             if (puppet instanceof AnimatedGuardian guardian) {
                 tickGuardian(player, guardian.animation());
             }
+            if (puppet instanceof PuppetRavager ravager) {
+                ravager.tickAnimations(player);
+            }
+        }
+    }
+
+    // ---- Ravager puppet ---------------------------------------------------------------------------------------
+
+    /**
+     * The Ravager model animates its bite and roar from tick counters ({@code getAttackTick}, {@code getRoarTick})
+     * that only advance while the mob itself ticks. The puppet overrides them with its own counters: a bite starts
+     * when the player's attack swing begins (vanilla: entity event 4, 10 ticks), a roar when the roar ability is
+     * used (20 ticks). It is never stunned.
+     */
+    private static final class PuppetRavager extends Ravager {
+        private static final int BITE_TICKS = 10;
+        private int biteTicks;
+        private int roarTicks;
+
+        PuppetRavager(Level level) {
+            super(EntityType.RAVAGER, level);
+        }
+
+        void tickAnimations(Player player) {
+            if (biteTicks > 0) {
+                biteTicks--;
+            }
+            if (roarTicks > 0) {
+                roarTicks--;
+            }
+            if (player.swinging && player.swingTime == 0 && biteTicks == 0) {
+                biteTicks = BITE_TICKS;
+            }
+        }
+
+        @Override
+        public int getAttackTick() {
+            return biteTicks;
+        }
+
+        @Override
+        public int getRoarTick() {
+            return roarTicks;
+        }
+
+        @Override
+        public int getStunnedTick() {
+            return 0;
         }
     }
 

@@ -236,5 +236,12 @@
   "advancements.sanguinaire.serum_synthesizer.title": "Una vida mejor gracias a la química",
   "advancements.sanguinaire.serum_synthesizer.description": "Fabrica un Sintetizador de sueros",
   "advancements.sanguinaire.sanguine_alembic.title": "Una buena cosecha",
-  "advancements.sanguinaire.sanguine_alembic.description": "Fabrica un Alambique sanguíneo"
+  "advancements.sanguinaire.sanguine_alembic.description": "Fabrica un Alambique sanguíneo",
+  "item.sanguinaire.illager_nose": "Nariz de illager",
+  "item.sanguinaire.tough_flesh": "Carne dura",
+  "item.sanguinaire.giant_tooth": "Diente gigante",
+  "mutation.sanguinaire.ravager": "Devastador",
+  "journal.sanguinaire.mutation.ravager": "El ariete viviente de los saqueadores. Los aldeanos huyen al verte y los gólems de hierro cargan contra ti, pero todos los illagers, brujas y devastadores te reciben como parte de la incursión. A voluntad, sueltas el rugido de un devastador que golpea a toda criatura cercana y la arroja lejos de ti, más lejos cuanto más cerca esté. Recuperación: 15 segundos.",
+  "advancements.sanguinaire.rust_in_peace.title": "Oxida en paz",
+  "advancements.sanguinaire.rust_in_peace.description": "Como devastador, mata a un gólem de hierro"
 }

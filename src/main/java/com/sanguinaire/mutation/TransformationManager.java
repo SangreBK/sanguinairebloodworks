@@ -33,6 +33,7 @@ import net.minecraft.world.entity.monster.piglin.AbstractPiglin;
 import net.minecraft.world.entity.npc.AbstractVillager;
 import net.minecraft.world.entity.player.Abilities;
 import net.minecraft.world.entity.monster.warden.Warden;
+import net.minecraft.world.entity.raid.Raider;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.animal.SnowGolem;
 import net.minecraft.world.entity.ai.util.DefaultRandomPos;
@@ -501,6 +502,9 @@ public final class TransformationManager {
             return true;
         }
         if (type.hasTrait(MutationTrait.IGNORED_BY_WARDENS) && mob instanceof Warden) {
+            return true;
+        }
+        if (type.hasTrait(MutationTrait.IGNORED_BY_ILLAGERS) && mob instanceof Raider) {
             return true;
         }
         return type.hasTrait(MutationTrait.IGNORED_BY_VILLAGE_DEFENDERS)

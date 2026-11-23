@@ -29,7 +29,7 @@ import java.util.Set;
  * The {@link #getId() id} is the gameplay identifier stored in serum NBT; it must never change once released.
  */
 public enum MutationType {
-    GOATMAN("goatman", 0x7A5230, 60, ModItems.GOAT_FUR, ModItems.TWISTED_FANG, ModItems.FOUL_STOMACH),
+    GOATMAN("goatman", 0x7A5230, 60, ModItems.GOAT_FUR, ModItems.TWISTED_FANG, ModItems.TOUGH_FLESH),
     ROTTING_ABOMINATION("rotting_abomination", 0x6B7A2E, 60, ModItems.DRIED_HEART, ModItems.DECAYED_HEART, ModItems.SOAKED_HEART),
     FADEHOUND("fadehound", 0x7B3FC4, 60, ModItems.CHITIN_PLATE, ModItems.CANINE_TONGUE, ModItems.NULL_RESIDUE),
     CREEPER("creeper", 0x56C23F, 30, ModItems.CREEPER_HEART, ModItems.FUSE_SPINE, ModItems.VOLATILE_FRONDS),
@@ -46,7 +46,8 @@ public enum MutationType {
     ELDER_GUARDIAN("elder_guardian", 0xCFC7A4, 30, ModItems.SPIKED_HEART, ModItems.OILY_FLESH, ModItems.ELDER_GUARDIAN_EYE),
     VILLAGER("villager", 0xB8735A, 30, ModItems.VILLAGER_HEART, ModItems.VILLAGER_NOSE, ModItems.VILLAGER_FLESH),
     WOLF("wolf", 0xA9A9A9, 30, ModItems.WOLF_FUR, ModItems.SHARP_FANGS, ModItems.CANINE_TONGUE),
-    GOAT("goat", 0xD8CFBE, 30, ModItems.MOUNTAIN_TALLOW, ModItems.GOAT_FUR, ModItems.CLOVEN_HOOF);
+    GOAT("goat", 0xD8CFBE, 30, ModItems.MOUNTAIN_TALLOW, ModItems.GOAT_FUR, ModItems.CLOVEN_HOOF),
+    RAVAGER("ravager", 0x5C5650, 30, ModItems.ILLAGER_NOSE, ModItems.TOUGH_FLESH, ModItems.GIANT_TOOTH);
 
     private static final Map<String, MutationType> BY_ID = new HashMap<>();
 
@@ -174,6 +175,7 @@ public enum MutationType {
             case VILLAGER -> TransformationStats.ofMob(EntityType.VILLAGER, false);
             case WOLF -> TransformationStats.ofMob(EntityType.WOLF, true);
             case GOAT -> TransformationStats.ofMob(EntityType.GOAT, true);
+            case RAVAGER -> TransformationStats.ofMob(EntityType.RAVAGER, true);
         };
     }
 
@@ -233,6 +235,7 @@ public enum MutationType {
             case VILLAGER -> EnumSet.of(MutationTrait.IGNORED_BY_VILLAGE_DEFENDERS, MutationTrait.CANNOT_ATTACK);
             case WOLF -> EnumSet.of(MutationTrait.FEARED_BY_SKELETONS_AND_SHEEP);
             case GOAT -> EnumSet.of(MutationTrait.FALL_DAMAGE_IMMUNE);
+            case RAVAGER -> EnumSet.of(MutationTrait.IGNORED_BY_ILLAGERS);
         };
     }
 
@@ -259,6 +262,7 @@ public enum MutationType {
             case VILLAGER -> EntityType.VILLAGER;
             case WOLF -> EntityType.WOLF;
             case GOAT -> EntityType.GOAT;
+            case RAVAGER -> EntityType.RAVAGER;
             case GOATMAN, ROTTING_ABOMINATION, FADEHOUND -> null;
         };
     }
@@ -281,6 +285,7 @@ public enum MutationType {
             case VILLAGER -> SoundEvents.VILLAGER_HURT;
             case WOLF -> SoundEvents.WOLF_HURT;
             case GOAT -> SoundEvents.GOAT_HURT;
+            case RAVAGER -> SoundEvents.RAVAGER_HURT;
             case GOATMAN, ROTTING_ABOMINATION, FADEHOUND -> null;
         };
     }
@@ -304,6 +309,7 @@ public enum MutationType {
             case SPIDER, VENOMOUS_SPIDER -> new StepSound(SoundEvents.SPIDER_STEP, 0.15F);
             case WOLF -> new StepSound(SoundEvents.WOLF_STEP, 0.15F);
             case GOAT -> new StepSound(SoundEvents.GOAT_STEP, 0.15F);
+            case RAVAGER -> new StepSound(SoundEvents.RAVAGER_STEP, 0.15F);
             case WARDEN -> new StepSound(SoundEvents.WARDEN_STEP, 10.0F);
             case GUARDIAN -> inWater ? StepSound.SILENT : new StepSound(SoundEvents.GUARDIAN_FLOP, 0.6F);
             case ELDER_GUARDIAN -> inWater ? StepSound.SILENT : new StepSound(SoundEvents.ELDER_GUARDIAN_FLOP, 0.6F);
@@ -329,6 +335,7 @@ public enum MutationType {
             case VILLAGER -> SoundEvents.VILLAGER_AMBIENT;
             case WOLF -> SoundEvents.WOLF_AMBIENT;
             case GOAT -> SoundEvents.GOAT_AMBIENT;
+            case RAVAGER -> SoundEvents.RAVAGER_AMBIENT;
             case CREEPER, GOATMAN, ROTTING_ABOMINATION, FADEHOUND -> null; // creepers are silent until they hiss
         };
     }
