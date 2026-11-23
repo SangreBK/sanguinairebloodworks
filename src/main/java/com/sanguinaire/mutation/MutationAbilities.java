@@ -1,5 +1,9 @@
 package com.sanguinaire.mutation;
 
+import org.joml.Vector3f;
+
+import net.minecraft.core.particles.DustParticleOptions;
+
 import net.minecraft.world.entity.decoration.ArmorStand;
 
 import net.minecraft.world.entity.TamableAnimal;
@@ -136,6 +140,14 @@ public final class MutationAbilities {
     public static final int RAVAGER_ROAR_ANIMATION_TICKS = 20;
     /** How long the split lasts; the hound cannot be hurt for this long. */
     public static final int FADE_SPLIT_TICKS = 20;
+    /** Dash trail: violet dust every quarter block along three streaks. */
+    private static final DustParticleOptions DASH_TRAIL_DUST = new DustParticleOptions(new Vector3f(0.55F, 0.12F, 0.9F), 1.3F);
+    private static final double DASH_TRAIL_SPACING = 0.25D;
+    private static final double DASH_TRAIL_FLANK = 0.45D;
+    private static final double DASH_TRAIL_FLANK_HEIGHT = 0.8D;
+    /** The top of Nico's Fade Hound head: about a block in front of the centre, just under 2 blocks up. */
+    private static final double DASH_TRAIL_HEAD_FORWARD = 1.0D;
+    private static final double DASH_TRAIL_HEAD_HEIGHT = 1.9D;
     /** Hostile mobs one roar must stun for "Silence of the Lambs". */
     private static final int ROAR_ADVANCEMENT_ENEMIES = 8;
     public static final int ROAR_EFFECT_TICKS = 20;
@@ -579,13 +591,22 @@ public final class MutationAbilities {
         player.teleportTo(destination.x, destination.y, destination.z);
         player.resetFallDistance();
 
-        // The shadow trail.
+        // The shadow trail: three violet streaks, from both flanks and from the top of the head.
         Vec3 path = destination.subtract(from);
-        int steps = Math.max(1, Mth.ceil(path.length() / 0.6D));
+        Vec3 flat = new Vec3(path.x, 0.0D, path.z);
+        Vec3 forward = flat.lengthSqr() < 1.0E-4D ? Vec3.directionFromRotation(0.0F, player.getYRot()) : flat.normalize();
+        Vec3 side = new Vec3(-forward.z, 0.0D, forward.x);
+        Vec3[] streaks = {
+                side.scale(DASH_TRAIL_FLANK).add(0.0D, DASH_TRAIL_FLANK_HEIGHT, 0.0D),
+                side.scale(-DASH_TRAIL_FLANK).add(0.0D, DASH_TRAIL_FLANK_HEIGHT, 0.0D),
+                forward.scale(DASH_TRAIL_HEAD_FORWARD).add(0.0D, DASH_TRAIL_HEAD_HEIGHT, 0.0D)};
+        int steps = Math.max(1, Mth.ceil(path.length() / DASH_TRAIL_SPACING));
         for (int i = 0; i <= steps; i++) {
-            Vec3 point = from.add(path.scale(i / (double) steps)).add(0.0D, halfHeight, 0.0D);
-            level.sendParticles(ParticleTypes.LARGE_SMOKE, point.x, point.y, point.z, 2, 0.15D, 0.2D, 0.15D, 0.005D);
-            level.sendParticles(ParticleTypes.SQUID_INK, point.x, point.y, point.z, 1, 0.1D, 0.1D, 0.1D, 0.01D);
+            Vec3 point = from.add(path.scale(i / (double) steps));
+            for (Vec3 offset : streaks) {
+                Vec3 at = point.add(offset);
+                level.sendParticles(DASH_TRAIL_DUST, at.x, at.y, at.z, 1, 0.02D, 0.02D, 0.02D, 0.0D);
+            }
         }
         level.sendParticles(ParticleTypes.SQUID_INK, destination.x, destination.y + halfHeight, destination.z, 12, 0.3D, 0.3D, 0.3D, 0.05D);
         level.playSound(null, destination.x, destination.y, destination.z, SoundEvents.ILLUSIONER_MIRROR_MOVE, SoundSource.PLAYERS, 1.0F, 1.2F);

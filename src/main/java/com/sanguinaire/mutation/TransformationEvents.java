@@ -1,5 +1,9 @@
 package com.sanguinaire.mutation;
 
+import net.minecraft.sounds.SoundSource;
+
+import net.minecraft.sounds.SoundEvents;
+
 import net.minecraft.network.chat.Component;
 
 import net.minecraftforge.event.entity.player.PlayerSleepInBedEvent;
@@ -402,6 +406,18 @@ public final class TransformationEvents {
     public static void onHighJump(LivingEvent.LivingJumpEvent event) {
         if (event.getEntity() instanceof Player player && TransformationManager.hasTrait(player, MutationTrait.HIGH_JUMP)) {
             player.setDeltaMovement(player.getDeltaMovement().add(0.0D, HIGH_JUMP_BONUS, 0.0D));
+        }
+    }
+
+    /** A Ravager's bite sounds like one: vanilla's Ravager attack sound on every melee hit. */
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    public static void onRavagerBite(AttackEntityEvent event) {
+        Player player = event.getEntity();
+        if (!event.isCanceled() && !player.level().isClientSide()
+                && TransformationManager.getActive(player) == MutationType.RAVAGER) {
+            Entity target = event.getTarget();
+            player.level().playSound(null, target.getX(), target.getY(), target.getZ(), SoundEvents.RAVAGER_ATTACK,
+                    SoundSource.PLAYERS, 1.0F, 1.0F);
         }
     }
 

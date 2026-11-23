@@ -20,7 +20,7 @@ public final class SanguinaireConfig {
                 .push("transformations");
         GOATMAN = new CreatureStats(builder, "goatman", "Goatman", 100, 40, 0, 20);
         ROTTING_ABOMINATION = new CreatureStats(builder, "rotting_abomination", "Rotting Abomination", 300, 80, 0, 10);
-        FADEHOUND = new CreatureStats(builder, "fadehound", "Fade Hound", 15, 10, 0, 4);
+        FADEHOUND = new CreatureStats(builder, "fadehound", "Fade Hound", 17, 10, 0, 4);
         builder.pop();
         SPEC = builder.build();
     }

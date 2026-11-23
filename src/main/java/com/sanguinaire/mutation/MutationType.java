@@ -352,8 +352,19 @@ public enum MutationType {
         return switch (this) {
             case GOATMAN -> EntityDimensions.scalable(0.8F, 2.6F);
             case ROTTING_ABOMINATION -> EntityDimensions.scalable(1.0F, 2.1F);
-            default -> EntityDimensions.scalable(0.9F, 1.0F); // FadeHound
+            default -> EntityDimensions.scalable(0.9F, 2.0F); // FadeHound (Nico's model stands about 2 blocks tall)
         };
+    }
+
+    /**
+     * Extra melee reach (vanilla is 3 blocks). The Fade Hound's long neck is a passive ({@link MutationTrait#LONG_REACH},
+     * +1.5); the Goatman simply has long arms (+0.5, 3.5 in total) and lists nothing for it.
+     */
+    public double getReachBonus() {
+        if (hasTrait(MutationTrait.LONG_REACH)) {
+            return 1.5D;
+        }
+        return this == GOATMAN ? 0.5D : 0.0D;
     }
 
     /** Eye height for the transformed hitbox: vanilla's default for living entities (85% of the height). */
