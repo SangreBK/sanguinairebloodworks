@@ -79,6 +79,7 @@ public final class AbilityEffectsClient {
         boolean self = entity == minecraft.player;
         switch (kind) {
             case MutationAbilities.ANIMATION_GOATMAN_ROAR -> {
+                GoatmanAnimationClient.onRoar(entityId);
                 spawnShockwave(level, entity);
                 if (minecraft.player != null && minecraft.player.distanceTo(entity) <= ROAR_FELT_RANGE) {
                     float closeness = self ? 1.0F : 1.0F - minecraft.player.distanceTo(entity) / (float) ROAR_FELT_RANGE;
