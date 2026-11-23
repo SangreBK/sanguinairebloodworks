@@ -1,5 +1,7 @@
 package com.sanguinaire.mutation;
 
+import com.sanguinaire.config.SanguinaireConfig;
+
 import com.sanguinaire.advancement.ModAdvancements;
 import com.sanguinaire.Sanguinaire;
 import com.sanguinaire.network.ModNetwork;
@@ -80,9 +82,6 @@ public final class MutationAbilities {
     private static final String COOLDOWN_ROAR = "roar";
     private static final String COOLDOWN_VOMIT = "vomit";
     private static final String COOLDOWN_DASH = "dash";
-    private static final int ROAR_COOLDOWN_TICKS = 20 * 20;
-    private static final int VOMIT_COOLDOWN_TICKS = 10 * 20;
-    private static final int DASH_COOLDOWN_TICKS = 4 * 20;
 
     private static final double ROAR_RADIUS = 8.0D;
     private static final int ROAR_STUN_TICKS = 20;             // Slowness VI for 1 s
@@ -436,7 +435,7 @@ public final class MutationAbilities {
         if (!checkCooldown(player, COOLDOWN_ROAR)) {
             return;
         }
-        startCooldown(player, COOLDOWN_ROAR, ROAR_COOLDOWN_TICKS);
+        startCooldown(player, COOLDOWN_ROAR, SanguinaireConfig.GOATMAN.abilityCooldownTicks());
         Level level = player.level();
         int stunnedEnemies = 0;
         for (Mob mob : level.getEntitiesOfClass(Mob.class, player.getBoundingBox().inflate(ROAR_RADIUS),
@@ -463,7 +462,7 @@ public final class MutationAbilities {
         if (!checkCooldown(player, COOLDOWN_VOMIT)) {
             return;
         }
-        startCooldown(player, COOLDOWN_VOMIT, VOMIT_COOLDOWN_TICKS);
+        startCooldown(player, COOLDOWN_VOMIT, SanguinaireConfig.ROTTING_ABOMINATION.abilityCooldownTicks());
         if (!(player.level() instanceof ServerLevel level)) {
             return;
         }
@@ -539,7 +538,7 @@ public final class MutationAbilities {
 
         player.heal(player.getMaxHealth() * 0.5F);
         DASH_INVULNERABLE_UNTIL.put(player.getUUID(), now(player) + DASH_INVULNERABLE_TICKS);
-        startCooldown(player, COOLDOWN_DASH, DASH_COOLDOWN_TICKS);
+        startCooldown(player, COOLDOWN_DASH, SanguinaireConfig.FADEHOUND.abilityCooldownTicks());
         ModNetwork.playAbilityAnimation(player, ANIMATION_FADEHOUND_DASH, DASH_EFFECT_TICKS);
     }
 

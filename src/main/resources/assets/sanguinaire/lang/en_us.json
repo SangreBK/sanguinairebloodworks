@@ -246,5 +246,7 @@
   "subtitles.sanguinaire.serum_inject": "Serum injected",
   "subtitles.sanguinaire.serum_heartbeat": "Heart races",
   "subtitles.sanguinaire.transformation_crack": "Bones crack",
-  "subtitles.sanguinaire.transformation_burst": "Body transforms"
+  "subtitles.sanguinaire.transformation_burst": "Body transforms",
+  "enchantment.sanguinaire.vivisection": "Vivisection",
+  "enchantment.sanguinaire.vivisection.desc": "Surgical Saw only. Deals 9 extra damage to creatures whose specimens you have fully researched in your Research Journal."
 }

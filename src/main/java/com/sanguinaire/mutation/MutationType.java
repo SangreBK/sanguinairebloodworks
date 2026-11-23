@@ -1,5 +1,7 @@
 package com.sanguinaire.mutation;
 
+import com.sanguinaire.config.SanguinaireConfig;
+
 import com.sanguinaire.Sanguinaire;
 import com.sanguinaire.registry.ModItems;
 import net.minecraft.network.chat.Component;
@@ -151,9 +153,10 @@ public enum MutationType {
      */
     public TransformationStats getStats() {
         return switch (this) {
-            case GOATMAN -> TransformationStats.of(100, 15, 35, 0.30, 40, TransformationStats.AXE_ATTACK_SPEED);
-            case ROTTING_ABOMINATION -> TransformationStats.of(300, 0, 0, 1.00, 80, TransformationStats.AXE_ATTACK_SPEED);
-            case FADEHOUND -> TransformationStats.of(15, 0, 0, 0.00, 10, TransformationStats.SWORD_ATTACK_SPEED);
+            // The three original creatures: health, damage and armor come from config/sanguinaire-common.toml.
+            case GOATMAN -> configured(SanguinaireConfig.GOATMAN, 0.30, TransformationStats.AXE_ATTACK_SPEED);
+            case ROTTING_ABOMINATION -> configured(SanguinaireConfig.ROTTING_ABOMINATION, 1.00, TransformationStats.AXE_ATTACK_SPEED);
+            case FADEHOUND -> configured(SanguinaireConfig.FADEHOUND, 0.00, TransformationStats.SWORD_ATTACK_SPEED);
             case CREEPER -> TransformationStats.ofMob(EntityType.CREEPER, false);
             case ZOMBIE -> TransformationStats.ofMob(EntityType.ZOMBIE, true);
             case HUSK -> TransformationStats.ofMob(EntityType.HUSK, true);
@@ -170,6 +173,12 @@ public enum MutationType {
             case WOLF -> TransformationStats.ofMob(EntityType.WOLF, true);
             case GOAT -> TransformationStats.ofMob(EntityType.GOAT, true);
         };
+    }
+
+    private static TransformationStats configured(SanguinaireConfig.CreatureStats config, double knockbackResistance,
+                                                  double attackSpeed) {
+        return TransformationStats.of(config.health.get(), config.armor.get(), 0.0D, knockbackResistance,
+                config.damage.get(), attackSpeed);
     }
 
     /** Hostile creatures by nature (everything but the Villager, Wolf and Goat): villagers fear them, golems attack them. */

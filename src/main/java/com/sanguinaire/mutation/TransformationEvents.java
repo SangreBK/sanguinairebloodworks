@@ -54,6 +54,8 @@ import org.jetbrains.annotations.Nullable;
 /** Forge-bus hooks for transformation ticking, death handling and event-driven passive traits. */
 @Mod.EventBusSubscriber(modid = Sanguinaire.MOD_ID)
 public final class TransformationEvents {
+    /** Half a heart: what is left after a lethal blow forces a transformation to end. */
+    private static final float DETRANSFORM_HEALTH = 1.0F;
     private static final int SHIELD_DISABLE_TICKS = 10 * 20;
     private static final int NAUSEA_TICKS = 15 * 20;
     private static final int FADE_INVISIBILITY_TICKS = 4 * 20;
@@ -79,6 +81,24 @@ public final class TransformationEvents {
             TransformationManager.tickPhysicalBoost(player);
             TransformationManager.tick(player);
         }
+    }
+
+    /**
+     * A blow that would kill a transformed player tears the borrowed body away instead: the transformation ends
+     * exactly as if its timer had run out (Weakened Hearts, blood aftermath and all) and the player is left on half
+     * a heart. Runs on the final damage (after armor and absorption) and before Totems of Undying are considered.
+     * Damage that bypasses invulnerability (the void, /kill) still kills.
+     */
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    public static void onLethalDamage(LivingDamageEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer player) || !TransformationManager.isTransformed(player)
+                || event.getAmount() < player.getHealth() || event.getSource().is(DamageTypeTags.BYPASSES_INVULNERABILITY)) {
+            return;
+        }
+        event.setCanceled(true);
+        player.setHealth(DETRANSFORM_HEALTH); // alive while the transformation ends, so its aftermath applies
+        TransformationManager.end(player);
+        player.setHealth(DETRANSFORM_HEALTH);
     }
 
     /** A transformation always ends on death (it still costs half a heart). Lowest priority: only real deaths. */

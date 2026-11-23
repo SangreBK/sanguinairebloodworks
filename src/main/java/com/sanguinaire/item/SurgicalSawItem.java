@@ -1,5 +1,7 @@
 package com.sanguinaire.item;
 
+import com.sanguinaire.registry.ModEnchantments;
+
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.Multimap;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -46,7 +48,8 @@ public class SurgicalSawItem extends Item {
     public static boolean isAllowedEnchantment(Enchantment enchantment) {
         return enchantment == Enchantments.SHARPNESS
                 || enchantment == Enchantments.UNBREAKING
-                || enchantment == Enchantments.MENDING;
+                || enchantment == Enchantments.MENDING
+                || enchantment == ModEnchantments.VIVISECTION.get();
     }
 
     @Override
