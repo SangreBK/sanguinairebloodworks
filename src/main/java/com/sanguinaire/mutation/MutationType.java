@@ -154,7 +154,9 @@ public enum MutationType {
     public TransformationStats getStats() {
         return switch (this) {
             // The three original creatures: health, damage and armor come from config/sanguinaire-common.toml.
-            case GOATMAN -> configured(SanguinaireConfig.GOATMAN, 0.30, TransformationStats.AXE_ATTACK_SPEED);
+            // Attack speed only sets how long a hit takes to recharge to full strength; the Goatman's real pace is set by
+            // its 0.75 s attack animation (GoatmanAttacks). 2.0 recharges in 10 ticks, well inside that.
+            case GOATMAN -> configured(SanguinaireConfig.GOATMAN, 0.30, GOATMAN_ATTACK_SPEED);
             case ROTTING_ABOMINATION -> configured(SanguinaireConfig.ROTTING_ABOMINATION, 1.00, TransformationStats.AXE_ATTACK_SPEED);
             case FADEHOUND -> configured(SanguinaireConfig.FADEHOUND, 0.00, TransformationStats.SWORD_ATTACK_SPEED);
             case CREEPER -> TransformationStats.ofMob(EntityType.CREEPER, false);
@@ -174,6 +176,8 @@ public enum MutationType {
             case GOAT -> TransformationStats.ofMob(EntityType.GOAT, true);
         };
     }
+
+    private static final double GOATMAN_ATTACK_SPEED = 2.0D;
 
     private static TransformationStats configured(SanguinaireConfig.CreatureStats config, double knockbackResistance,
                                                   double attackSpeed) {

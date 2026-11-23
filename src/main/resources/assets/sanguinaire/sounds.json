@@ -2,25 +2,46 @@
   "serum_inject": {
     "subtitle": "subtitles.sanguinaire.serum_inject",
     "sounds": [
-      { "name": "minecraft:entity.bee.sting", "type": "event" }
+      {
+        "name": "minecraft:entity.bee.sting",
+        "type": "event"
+      }
     ]
   },
   "serum_heartbeat": {
     "subtitle": "subtitles.sanguinaire.serum_heartbeat",
     "sounds": [
-      { "name": "minecraft:entity.warden.heartbeat", "type": "event" }
+      {
+        "name": "minecraft:entity.warden.heartbeat",
+        "type": "event"
+      }
     ]
   },
   "transformation_crack": {
     "subtitle": "subtitles.sanguinaire.transformation_crack",
     "sounds": [
-      { "name": "minecraft:block.bone_block.break", "type": "event" }
+      {
+        "name": "minecraft:block.bone_block.break",
+        "type": "event"
+      }
     ]
   },
   "transformation_burst": {
     "subtitle": "subtitles.sanguinaire.transformation_burst",
     "sounds": [
-      { "name": "minecraft:entity.elder_guardian.curse", "type": "event" }
+      {
+        "name": "minecraft:entity.elder_guardian.curse",
+        "type": "event"
+      }
+    ]
+  },
+  "goatman_swipe": {
+    "subtitle": "subtitles.sanguinaire.goatman_swipe",
+    "sounds": [
+      {
+        "name": "minecraft:entity.player.attack.sweep",
+        "type": "event"
+      }
     ]
   }
 }

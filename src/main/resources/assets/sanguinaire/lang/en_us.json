@@ -248,5 +248,6 @@
   "subtitles.sanguinaire.transformation_crack": "Bones crack",
   "subtitles.sanguinaire.transformation_burst": "Body transforms",
   "enchantment.sanguinaire.vivisection": "Vivisection",
-  "enchantment.sanguinaire.vivisection.desc": "Surgical Saw only. Deals 9 extra damage to creatures whose specimens you have fully researched in your Research Journal."
+  "enchantment.sanguinaire.vivisection.desc": "Surgical Saw only. Deals 9 extra damage to creatures whose specimens you have fully researched in your Research Journal.",
+  "subtitles.sanguinaire.goatman_swipe": "Goatman swipes"
 }

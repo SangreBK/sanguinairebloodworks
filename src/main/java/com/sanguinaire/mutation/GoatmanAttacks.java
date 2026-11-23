@@ -1,7 +1,15 @@
 package com.sanguinaire.mutation;
 
 import com.sanguinaire.Sanguinaire;
+import com.sanguinaire.registry.ModSounds;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.decoration.ArmorStand;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraftforge.event.TickEvent;
@@ -25,6 +33,10 @@ import java.util.UUID;
  * later the hit is delivered for real (if the target is still alive and in reach). Until the animation is over
  * further attacks are ignored. The client enforces the same wait on the attack key, so normally nothing is
  * cancelled here except the original, early hit.
+ * <p>
+ * The delivered hit is a normal vanilla attack on the first target (full damage, crits, enchantments), then a wide
+ * sweep deals {@link #SWEEP_DAMAGE} to everything else around it, with a heavy swipe sound. The Goatman's attack
+ * speed is set high enough (see {@code MutationType}) that every hit allowed by the animation lands at full strength.
  */
 @Mod.EventBusSubscriber(modid = Sanguinaire.MOD_ID)
 public final class GoatmanAttacks {
@@ -36,6 +48,11 @@ public final class GoatmanAttacks {
     private static final int SERVER_COOLDOWN_TICKS = ATTACK_ANIMATION_TICKS - 2;
     /** Extra distance the target may move away during the wind-up and still be hit. */
     private static final double REACH_TOLERANCE = 1.5D;
+    /** Damage dealt to everything else caught in the swipe. */
+    private static final float SWEEP_DAMAGE = 5.0F;
+    private static final double SWEEP_RADIUS = 1.5D;
+    private static final double SWEEP_MAX_DISTANCE = 4.5D;
+    private static final float SWEEP_KNOCKBACK = 0.5F;
 
     private record PendingHit(int targetId, int hitAt) {
     }
@@ -88,17 +105,46 @@ public final class GoatmanAttacks {
             if (target == null || !target.isAlive()) {
                 continue;
             }
+            // Measured from the eyes to the target's hitbox, like vanilla's own reach check (feet-to-centre wrongly
+            // dropped hits on wide creatures such as Ghasts and Ravagers).
             double reach = player.getEntityReach() + REACH_TOLERANCE;
-            if (player.distanceToSqr(target) > reach * reach) {
+            if (target.getBoundingBox().distanceToSqr(player.getEyePosition()) > reach * reach) {
                 continue; // it got away during the wind-up
             }
             DELIVERING.add(player.getUUID());
             try {
                 player.attack(target);
+                sweep(player, target);
             } finally {
                 DELIVERING.remove(player.getUUID());
             }
+            player.level().playSound(null, target.getX(), target.getY(0.5D), target.getZ(), ModSounds.GOATMAN_SWIPE.get(),
+                    SoundSource.PLAYERS, 1.3F, 0.55F + player.getRandom().nextFloat() * 0.1F);
         }
+    }
+
+    /**
+     * The claws carry through: every other creature around the target takes {@link #SWEEP_DAMAGE} and is knocked
+     * back, like a sword's sweeping edge but wider, to suit the Goatman's reach.
+     */
+    private static void sweep(ServerPlayer player, Entity target) {
+        if (!(player.level() instanceof ServerLevel level)) {
+            return;
+        }
+        double sinYaw = Mth.sin(player.getYRot() * Mth.DEG_TO_RAD);
+        double cosYaw = Mth.cos(player.getYRot() * Mth.DEG_TO_RAD);
+        AABB area = target.getBoundingBox().inflate(SWEEP_RADIUS, 0.5D, SWEEP_RADIUS);
+        for (LivingEntity other : level.getEntitiesOfClass(LivingEntity.class, area)) {
+            if (other == player || other == target || !other.isAlive() || player.isAlliedTo(other)
+                    || (other instanceof ArmorStand stand && stand.isMarker())
+                    || player.distanceToSqr(other) > SWEEP_MAX_DISTANCE * SWEEP_MAX_DISTANCE) {
+                continue;
+            }
+            other.knockback(SWEEP_KNOCKBACK, sinYaw, -cosYaw);
+            other.hurt(player.damageSources().playerAttack(player), SWEEP_DAMAGE);
+        }
+        level.sendParticles(ParticleTypes.SWEEP_ATTACK, player.getX() - sinYaw, player.getY(0.6D), player.getZ() + cosYaw,
+                1, 0.0D, 0.0D, 0.0D, 0.0D);
     }
 
     @SubscribeEvent

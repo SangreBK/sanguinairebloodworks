@@ -23,6 +23,9 @@ public final class ModSounds {
     /** The moment the body gives way and the transformation completes. */
     public static final RegistryObject<SoundEvent> TRANSFORMATION_BURST = register("transformation_burst");
 
+    /** A Goatman's claws landing: a heavy, low swipe. */
+    public static final RegistryObject<SoundEvent> GOATMAN_SWIPE = register("goatman_swipe");
+
     private ModSounds() {
     }
 
