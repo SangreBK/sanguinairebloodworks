@@ -1,0 +1,33 @@
+Copyright (c) 2026 SangreBK
+
+All rights reserved.
+
+This software is provided for viewing, studying, and contribution through
+GitHub only.
+
+Permission is granted to fork this repository on GitHub for personal,
+educational, or contribution purposes, including submitting pull requests
+to the original repository.
+
+Outside of GitHub, you may NOT:
+- Redistribute this software or its derivatives
+- Publish it on other platforms or websites
+- Distribute compiled binaries (JARs)
+- Reupload or mirror the source code
+- Create derivative works for public release
+
+Unless you have received explicit written permission from the copyright
+holder.
+
+This restriction applies to both source and compiled forms, with or without
+modification.
+
+This software is provided "as is", without warranty of any kind, express or
+implied, including but not limited to the warranties of merchantability,
+fitness for a particular purpose, and noninfringement. In no event shall
+the author be liable for any claim, damages, or other liability arising from
+the use of this software.
+
+This project is a Minecraft Forge mod.
+Minecraft Forge is licensed under the LGPL 2.1.
+This project is not affiliated with or endorsed by Minecraft Forge.
