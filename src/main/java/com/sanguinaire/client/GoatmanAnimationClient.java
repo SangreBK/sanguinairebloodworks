@@ -19,7 +19,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Client-side timing for the Goatman's one-shot animations, read by {@code GoatmanModel}:
+ * Client-side timing for the one-shot animations of Nico's animated creatures, read by {@code GoatmanModel} and
+ * {@code FadeHoundModel} (both attacks last 0.75 s):
  * <ul>
  *     <li><b>Attack</b>: starts whenever a Goatman swings (synced to everyone by vanilla's swing packet), unless one
  *     is already playing.</li>
@@ -81,7 +82,8 @@ public final class GoatmanAnimationClient {
             return;
         }
         for (Player player : minecraft.level.players()) {
-            if (!player.swinging || player.swingTime != 0 || TransformationManager.getActive(player) != MutationType.GOATMAN) {
+            MutationType type = TransformationManager.getActive(player);
+            if (!player.swinging || player.swingTime != 0 || (type != MutationType.GOATMAN && type != MutationType.FADEHOUND)) {
                 continue;
             }
             Integer start = ATTACK_STARTS.get(player.getId());
@@ -96,7 +98,7 @@ public final class GoatmanAnimationClient {
     public static void onAttackKey(InputEvent.InteractionKeyMappingTriggered event) {
         Minecraft minecraft = Minecraft.getInstance();
         if (!event.isAttack() || minecraft.player == null || minecraft.level == null
-                || TransformationManager.getActive(minecraft.player) != MutationType.GOATMAN) {
+                || !GoatmanAttacks.hasDelayedAttack(TransformationManager.getActive(minecraft.player))) {
             return;
         }
         if (minecraft.hitResult != null && minecraft.hitResult.getType() == HitResult.Type.BLOCK) {

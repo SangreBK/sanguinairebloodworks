@@ -208,12 +208,12 @@ public enum MutationType {
 
     private EnumSet<MutationTrait> computeTraits() {
         return switch (this) {
-            case GOATMAN -> EnumSet.of(MutationTrait.HUNGER_ON_KILL, MutationTrait.HALF_FALL_DAMAGE, MutationTrait.STEP_UP,
+            case GOATMAN -> EnumSet.of(MutationTrait.HUNGER_ON_KILL, MutationTrait.HALF_FALL_DAMAGE, MutationTrait.HIGH_JUMP,
                     MutationTrait.DISABLES_SHIELDS);
             case ROTTING_ABOMINATION -> EnumSet.of(MutationTrait.NAUSEATES_ATTACKERS, MutationTrait.PROJECTILE_IMMUNE,
                     MutationTrait.CANNOT_JUMP, MutationTrait.SURVIVES_ONE_HIT, MutationTrait.STEP_UP);
             case FADEHOUND -> EnumSet.of(MutationTrait.SLOWNESS_IMMUNE, MutationTrait.FADES_WHEN_HIT,
-                    MutationTrait.ARMOR_PIERCING, MutationTrait.NIGHT_HUNTER);
+                    MutationTrait.LONG_REACH, MutationTrait.SWIFT, MutationTrait.NIGHT_HUNTER);
             case CREEPER -> EnumSet.of(MutationTrait.COUNTS_AS_MONSTER, MutationTrait.CANNOT_ATTACK);
             case ZOMBIE -> EnumSet.of(MutationTrait.COUNTS_AS_MONSTER, MutationTrait.BURNS_IN_SUNLIGHT,
                     MutationTrait.ZOMBIFIES_VILLAGERS);

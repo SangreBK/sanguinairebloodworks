@@ -1,5 +1,9 @@
 package com.sanguinaire.mutation;
 
+import net.minecraft.network.chat.Component;
+
+import net.minecraftforge.event.entity.player.PlayerSleepInBedEvent;
+
 import com.sanguinaire.Sanguinaire;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
@@ -56,6 +60,7 @@ import org.jetbrains.annotations.Nullable;
 public final class TransformationEvents {
     /** Half a heart: what is left after a lethal blow forces a transformation to end. */
     private static final float DETRANSFORM_HEALTH = 1.0F;
+    private static final double HIGH_JUMP_BONUS = 0.13D;
     private static final int SHIELD_DISABLE_TICKS = 10 * 20;
     private static final int NAUSEA_TICKS = 15 * 20;
     private static final int FADE_INVISIBILITY_TICKS = 4 * 20;
@@ -389,6 +394,28 @@ public final class TransformationEvents {
     }
 
     /** Night Hunter's Jump Boost I (+0.1 jump power), without a visible effect. Runs where the jump is simulated. */
+    /**
+     * HIGH_JUMP (Goatman): one block higher. Vanilla's jump (0.42 upward) peaks at 1.25 blocks; 0.55 peaks just over
+     * 2. Runs on the client too, which is what actually moves the player.
+     */
+    @SubscribeEvent
+    public static void onHighJump(LivingEvent.LivingJumpEvent event) {
+        if (event.getEntity() instanceof Player player && TransformationManager.hasTrait(player, MutationTrait.HIGH_JUMP)) {
+            player.setDeltaMovement(player.getDeltaMovement().add(0.0D, HIGH_JUMP_BONUS, 0.0D));
+        }
+    }
+
+    /** No transformed player can sleep. */
+    @SubscribeEvent
+    public static void onSleep(PlayerSleepInBedEvent event) {
+        Player player = event.getEntity();
+        if (TransformationManager.isTransformed(player) || (player instanceof ServerPlayer serverPlayer
+                && TransformationSequence.isPending(serverPlayer))) {
+            event.setResult(Player.BedSleepingProblem.OTHER_PROBLEM);
+            player.displayClientMessage(Component.translatable("message.sanguinaire.cannot_sleep_transformed"), true);
+        }
+    }
+
     @SubscribeEvent
     public static void onNightHunterJump(LivingEvent.LivingJumpEvent event) {
         if (event.getEntity() instanceof Player player && TransformationManager.isNightHunting(player)) {

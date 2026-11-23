@@ -97,6 +97,12 @@ public final class TransformationManager {
     private static final UUID STEP_UP_ID = UUID.fromString("5b0c9d7e-1f43-4a7e-9a1d-0c6a3e0b7a07");
     private static final UUID SWIM_SPEED_ID = UUID.fromString("5b0c9d7e-1f43-4a7e-9a1d-0c6a3e0b7a08");
     private static final UUID NIGHT_SPEED_ID = UUID.fromString("5b0c9d7e-1f43-4a7e-9a1d-0c6a3e0b7a09");
+    private static final UUID REACH_ID = UUID.fromString("5b0c9d7e-1f43-4a7e-9a1d-0c6a3e0b7a0a");
+    private static final UUID SWIFT_ID = UUID.fromString("5b0c9d7e-1f43-4a7e-9a1d-0c6a3e0b7a0b");
+    /** LONG_REACH: +1.5 blocks of melee reach. */
+    private static final double REACH_BONUS = 1.5D;
+    /** SWIFT: vanilla sprinting is +30%, so +30% makes walking as fast as a normal sprint (and sprinting faster). */
+    private static final double SWIFT_BONUS = 0.3D;
     /** Speed I: +20% movement speed. */
     private static final double NIGHT_SPEED_BONUS = 0.2D;
     private static final double WARDEN_CALM_RADIUS = 48.0D;
@@ -402,6 +408,24 @@ public final class TransformationManager {
             }
         }
         applySwimSpeed(player, type);
+        applyTraitModifier(player.getAttribute(ForgeMod.ENTITY_REACH.get()), REACH_ID, "Sanguinaire long reach",
+                type.hasTrait(MutationTrait.LONG_REACH), REACH_BONUS, AttributeModifier.Operation.ADDITION);
+        applyTraitModifier(player.getAttribute(Attributes.MOVEMENT_SPEED), SWIFT_ID, "Sanguinaire swiftness",
+                type.hasTrait(MutationTrait.SWIFT), SWIFT_BONUS, AttributeModifier.Operation.MULTIPLY_TOTAL);
+    }
+
+    /** Adds or removes one fixed trait-driven attribute modifier, touching nothing when it is already right. */
+    private static void applyTraitModifier(@Nullable AttributeInstance instance, UUID id, String name, boolean wanted,
+                                           double amount, AttributeModifier.Operation operation) {
+        if (instance == null) {
+            return;
+        }
+        boolean present = instance.getModifier(id) != null;
+        if (wanted && !present) {
+            instance.addTransientModifier(new AttributeModifier(id, name, amount, operation));
+        } else if (!wanted && present) {
+            instance.removeModifier(id);
+        }
     }
 
     private static void applySwimSpeed(ServerPlayer player, MutationType type) {
@@ -439,6 +463,11 @@ public final class TransformationManager {
         AttributeInstance speed = player.getAttribute(Attributes.MOVEMENT_SPEED);
         if (speed != null) {
             speed.removeModifier(NIGHT_SPEED_ID);
+            speed.removeModifier(SWIFT_ID);
+        }
+        AttributeInstance reach = player.getAttribute(ForgeMod.ENTITY_REACH.get());
+        if (reach != null) {
+            reach.removeModifier(REACH_ID);
         }
         if (player.getHealth() > player.getMaxHealth()) {
             player.setHealth(player.getMaxHealth());

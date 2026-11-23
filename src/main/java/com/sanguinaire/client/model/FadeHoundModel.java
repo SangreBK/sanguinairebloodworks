@@ -1,92 +1,135 @@
 package com.sanguinaire.client.model;
 
-import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.minecraft.client.model.EntityModel;
+import com.sanguinaire.client.GoatmanAnimationClient;
+import net.minecraft.client.animation.AnimationDefinition;
+import net.minecraft.client.animation.KeyframeAnimations;
+import net.minecraft.client.model.HierarchicalModel;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
+import net.minecraft.client.model.geom.builders.CubeDeformation;
 import net.minecraft.client.model.geom.builders.CubeListBuilder;
 import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.client.model.geom.builders.MeshDefinition;
 import net.minecraft.client.model.geom.builders.PartDefinition;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Player;
+import org.joml.Vector3f;
 
 /**
- * FadeHound (design §4.3): a medium, dark, four-legged hound whose gaping mouth takes up most of its body, with a
- * long tongue hanging out and four glowing purple eyes. The eyes are drawn again as an emissive layer.
+ * Nico's Fade Hound model (Blockbench 5.2.2) with his keyframe animations ({@link FadeHoundAnimations}). It is drawn
+ * three times with the same pose, once per texture layer (solid, semi-transparent, glowing; see
+ * {@code TransformationRenderer}).
+ * <p>
+ * Same two controllers as the Goatman: the <b>body</b> plays {@link FadeHoundAnimations#ATTACK} while a bite is
+ * playing, otherwise IDLE / MOVE_BODY blended by walking speed; the <b>legs</b> always blend IDLE_LEGS / MOVE_LEGS,
+ * so biting never stops the stride. Walk cycles follow the distance walked; the head turns towards where the player
+ * looks.
  */
-public class FadeHoundModel extends EntityModel<Player> {
+public class FadeHoundModel extends HierarchicalModel<Player> {
+    /** Vanilla limb swing covered by one walking cycle (the period of a vanilla quadruped's leg swing). */
+    private static final float LIMB_SWING_PER_CYCLE = Mth.TWO_PI / 0.6662F;
+    private static final float MOVE_CYCLE_SECONDS = 1.5F;
+
+    private final Vector3f cache = new Vector3f();
     private final ModelPart root;
     private final ModelPart head;
-    private final ModelPart jaw;
-    private final ModelPart tongue;
-    private final ModelPart rightFrontLeg;
-    private final ModelPart leftFrontLeg;
-    private final ModelPart rightHindLeg;
-    private final ModelPart leftHindLeg;
 
     public FadeHoundModel(ModelPart root) {
         this.root = root;
-        this.head = root.getChild("head");
-        this.jaw = head.getChild("jaw");
-        this.tongue = jaw.getChild("tongue");
-        this.rightFrontLeg = root.getChild("right_front_leg");
-        this.leftFrontLeg = root.getChild("left_front_leg");
-        this.rightHindLeg = root.getChild("right_hind_leg");
-        this.leftHindLeg = root.getChild("left_hind_leg");
+        this.head = root.getChild("main").getChild("head");
+    }
+
+    @Override
+    public ModelPart root() {
+        return root;
     }
 
     public static LayerDefinition createBodyLayer() {
-        MeshDefinition mesh = new MeshDefinition();
-        PartDefinition root = mesh.getRoot();
-        root.addOrReplaceChild("body", CubeListBuilder.create().texOffs(0, 0).addBox(-4.0F, -8.0F, -6.0F, 8, 8, 12),
-                PartPose.offset(0.0F, 16.0F, 2.0F));
+        MeshDefinition meshdefinition = new MeshDefinition();
+        PartDefinition partdefinition = meshdefinition.getRoot();
 
-        PartDefinition head = root.addOrReplaceChild("head", CubeListBuilder.create()
-                        .texOffs(0, 20).addBox(-5.0F, -5.0F, -10.0F, 10, 5, 10)        // upper jaw
-                        .texOffs(0, 48).addBox(-4.5F, 0.0F, -9.5F, 9, 1, 9)            // upper teeth
-                        .texOffs(40, 11).addBox(-4.0F, -6.0F, -8.0F, 1, 1, 1)          // four eyes
-                        .texOffs(40, 11).addBox(-2.0F, -6.0F, -9.0F, 1, 1, 1)
-                        .texOffs(40, 11).addBox(1.0F, -6.0F, -9.0F, 1, 1, 1)
-                        .texOffs(40, 11).addBox(3.0F, -6.0F, -8.0F, 1, 1, 1),
-                PartPose.offset(0.0F, 11.0F, -3.0F));
-        PartDefinition jaw = head.addOrReplaceChild("jaw", CubeListBuilder.create()
-                        .texOffs(0, 35).addBox(-5.0F, 0.0F, -10.0F, 10, 3, 10)
-                        .texOffs(0, 48).addBox(-4.5F, -1.0F, -9.5F, 9, 1, 9),          // lower teeth
-                PartPose.offsetAndRotation(0.0F, 0.0F, 0.0F, 0.45F, 0.0F, 0.0F));
-        jaw.addOrReplaceChild("tongue", CubeListBuilder.create().texOffs(40, 0).addBox(-1.0F, 0.0F, -10.0F, 2, 1, 10),
-                PartPose.offsetAndRotation(0.0F, -0.5F, -6.0F, 0.5F, 0.0F, 0.0F));
+        PartDefinition main = partdefinition.addOrReplaceChild("main", CubeListBuilder.create(), PartPose.offset(4.3333F, 10.0F, -9.1667F));
 
-        CubeListBuilder leg = CubeListBuilder.create().texOffs(44, 11).addBox(-1.5F, 0.0F, -1.5F, 3, 8, 3);
-        root.addOrReplaceChild("right_front_leg", leg, PartPose.offset(-2.5F, 16.0F, -2.0F));
-        root.addOrReplaceChild("left_front_leg", leg, PartPose.offset(2.5F, 16.0F, -2.0F));
-        root.addOrReplaceChild("right_hind_leg", leg, PartPose.offset(-2.5F, 16.0F, 6.0F));
-        root.addOrReplaceChild("left_hind_leg", leg, PartPose.offset(2.5F, 16.0F, 6.0F));
-        return LayerDefinition.create(mesh, 64, 64);
+        PartDefinition leftleg = main.addOrReplaceChild("leftleg", CubeListBuilder.create().texOffs(47, 96).addBox(0.0F, -1.75F, -4.25F, 5.0F, 10.0F, 7.0F, new CubeDeformation(0.0F)), PartPose.offset(2.6667F, -5.75F, 2.4167F));
+
+        PartDefinition lowerleft = leftleg.addOrReplaceChild("lowerleft", CubeListBuilder.create().texOffs(71, 77).addBox(-2.0F, -3.25F, -0.5F, 4.0F, 21.0F, 4.0F, new CubeDeformation(0.0F))
+        .texOffs(87, 88).addBox(-4.0F, 17.3F, -7.5F, 8.0F, 3.0F, 11.0F, new CubeDeformation(0.0F)), PartPose.offset(2.0F, 1.5F, 3.25F));
+
+        PartDefinition rightleg = main.addOrReplaceChild("rightleg", CubeListBuilder.create().texOffs(47, 96).mirror().addBox(-5.0F, -1.75F, -4.25F, 5.0F, 10.0F, 7.0F, new CubeDeformation(0.0F)).mirror(false), PartPose.offset(-11.3333F, -5.75F, 2.4167F));
+
+        PartDefinition lowerright = rightleg.addOrReplaceChild("lowerright", CubeListBuilder.create().texOffs(71, 77).mirror().addBox(-2.0F, -3.25F, -0.5F, 4.0F, 21.0F, 4.0F, new CubeDeformation(0.0F)).mirror(false)
+        .texOffs(87, 88).mirror().addBox(-4.0F, 17.3F, -7.5F, 8.0F, 3.0F, 11.0F, new CubeDeformation(0.0F)).mirror(false), PartPose.offset(-2.0F, 1.5F, 3.25F));
+
+        PartDefinition rightleg2 = main.addOrReplaceChild("rightleg2", CubeListBuilder.create().texOffs(47, 96).mirror().addBox(-5.0F, -1.75F, -4.25F, 5.0F, 10.0F, 7.0F, new CubeDeformation(0.0F)).mirror(false), PartPose.offset(-10.3333F, -5.75F, 30.4167F));
+
+        PartDefinition lowerright2 = rightleg2.addOrReplaceChild("lowerright2", CubeListBuilder.create().texOffs(71, 77).mirror().addBox(-2.0F, -3.25F, -0.5F, 4.0F, 21.0F, 4.0F, new CubeDeformation(0.0F)).mirror(false)
+        .texOffs(87, 88).mirror().addBox(-4.0F, 17.3F, -7.5F, 8.0F, 3.0F, 11.0F, new CubeDeformation(0.0F)).mirror(false), PartPose.offset(-2.0F, 1.5F, 3.25F));
+
+        PartDefinition leftleg2 = main.addOrReplaceChild("leftleg2", CubeListBuilder.create().texOffs(47, 96).addBox(0.0F, -1.75F, -4.25F, 5.0F, 10.0F, 7.0F, new CubeDeformation(0.0F)), PartPose.offset(1.6667F, -5.75F, 30.4167F));
+
+        PartDefinition lowerleft2 = leftleg2.addOrReplaceChild("lowerleft2", CubeListBuilder.create().texOffs(71, 77).addBox(-2.0F, -3.25F, -0.5F, 4.0F, 21.0F, 4.0F, new CubeDeformation(0.0F))
+        .texOffs(87, 88).addBox(-4.0F, 17.3F, -7.5F, 8.0F, 3.0F, 11.0F, new CubeDeformation(0.0F)), PartPose.offset(2.0F, 1.5F, 3.25F));
+
+        PartDefinition head = main.addOrReplaceChild("head", CubeListBuilder.create(), PartPose.offset(-4.3333F, -5.3333F, -1.6667F));
+
+        PartDefinition uppermaw = head.addOrReplaceChild("uppermaw", CubeListBuilder.create().texOffs(0, 57).addBox(-7.0F, -11.5F, -20.0F, 14.0F, 7.0F, 19.0F, new CubeDeformation(0.0F))
+        .texOffs(0, 0).addBox(-7.0F, -4.5F, -40.0F, 14.0F, 17.0F, 40.0F, new CubeDeformation(0.0F)), PartPose.offset(0.0F, 0.3333F, 0.8333F));
+
+        PartDefinition leftear = uppermaw.addOrReplaceChild("leftear", CubeListBuilder.create(), PartPose.offset(6.25F, -9.5F, -6.75F));
+
+        PartDefinition earleft_r1 = leftear.addOrReplaceChild("earleft_r1", CubeListBuilder.create().texOffs(14, 85).addBox(-0.2401F, -3.0859F, 0.2262F, 14.0F, 7.0F, 0.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(0.0F, 0.0F, 0.0F, 0.6863F, -0.7356F, -0.8845F));
+
+        PartDefinition rightear = uppermaw.addOrReplaceChild("rightear", CubeListBuilder.create(), PartPose.offset(-6.25F, -9.25F, -6.0F));
+
+        PartDefinition earright_r1 = rightear.addOrReplaceChild("earright_r1", CubeListBuilder.create().texOffs(14, 85).mirror().addBox(-13.4F, -3.6431F, -0.2039F, 14.0F, 7.0F, 0.0F, new CubeDeformation(0.0F)).mirror(false), PartPose.offsetAndRotation(0.0F, 0.0F, 0.0F, 0.6863F, 0.7356F, 0.8845F));
+
+        PartDefinition lowermaw = head.addOrReplaceChild("lowermaw", CubeListBuilder.create(), PartPose.offset(0.0F, 7.0F, 0.0F));
+
+        PartDefinition lowermaw_r1 = lowermaw.addOrReplaceChild("lowermaw_r1", CubeListBuilder.create().texOffs(0, 0).addBox(-7.0F, -8.5F, -20.0F, 14.0F, 17.0F, 40.0F, new CubeDeformation(-1.0F)), PartPose.offsetAndRotation(0.0F, -3.6667F, -19.1667F, 0.0F, 0.0F, -3.1416F));
+
+        PartDefinition torso = main.addOrReplaceChild("torso", CubeListBuilder.create().texOffs(66, 102).addBox(-6.0F, -6.5F, 9.5F, 12.0F, 13.0F, 13.0F, new CubeDeformation(0.0F)), PartPose.offset(-4.3333F, -2.0F, 8.6667F));
+
+        PartDefinition uppertorso = torso.addOrReplaceChild("uppertorso", CubeListBuilder.create().texOffs(0, 94).addBox(-7.0F, -6.0F, -9.5F, 14.0F, 15.0F, 19.0F, new CubeDeformation(0.0F)), PartPose.offset(0.0F, -1.5F, 0.0F));
+
+        PartDefinition tail = torso.addOrReplaceChild("tail", CubeListBuilder.create().texOffs(92, 39).addBox(0.0F, -4.0F, 0.0F, 0.0F, 12.0F, 18.0F, new CubeDeformation(0.0F)), PartPose.offset(1.0F, -1.5F, 22.5F));
+
+        PartDefinition tail2 = tail.addOrReplaceChild("tail2", CubeListBuilder.create().texOffs(56, 39).addBox(0.0F, -8.0F, 0.0F, 0.0F, 12.0F, 18.0F, new CubeDeformation(0.0F)), PartPose.offset(0.0F, 4.0F, 18.0F));
+
+        return LayerDefinition.create(meshdefinition, 128, 128);
     }
 
     @Override
     public void setupAnim(Player player, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
-        head.yRot = netHeadYaw * Mth.DEG_TO_RAD * 0.8F;
-        head.xRot = headPitch * Mth.DEG_TO_RAD * 0.6F;
+        root.getAllParts().forEach(ModelPart::resetPose);
+        float moving = Mth.clamp(limbSwingAmount * 1.6F, 0.0F, 1.0F);
+        long idleMillis = toMillis(ageInTicks / 20.0F);
+        long walkMillis = toMillis(limbSwing / LIMB_SWING_PER_CYCLE * MOVE_CYCLE_SECONDS);
 
-        float gait = Mth.cos(limbSwing * 0.6662F) * 1.4F * limbSwingAmount;
-        rightFrontLeg.xRot = gait;
-        leftHindLeg.xRot = gait;
-        leftFrontLeg.xRot = -gait;
-        rightHindLeg.xRot = -gait;
+        // Body controller.
+        float attack = GoatmanAnimationClient.attackSeconds(player, ageInTicks);
+        if (attack >= 0.0F) {
+            play(FadeHoundAnimations.ATTACK, toMillis(attack), 1.0F);
+        } else {
+            play(FadeHoundAnimations.IDLE, idleMillis, 1.0F - moving);
+            play(FadeHoundAnimations.MOVE_BODY, walkMillis, moving);
+        }
 
-        float breathe = Mth.sin(ageInTicks * 0.12F) * 0.06F;
-        float bite = attackTime > 0.0F ? Mth.sin(attackTime * Mth.PI) * 0.6F : 0.0F;
-        jaw.xRot = 0.45F + breathe + bite;
-        tongue.xRot = 0.5F + Mth.sin(ageInTicks * 0.1F) * 0.12F;
-        tongue.yRot = Mth.sin(ageInTicks * 0.15F) * 0.3F + Mth.cos(limbSwing * 0.6662F) * 0.2F * limbSwingAmount;
+        // Legs controller.
+        play(FadeHoundAnimations.IDLE_LEGS, idleMillis, 1.0F - moving);
+        play(FadeHoundAnimations.MOVE_LEGS, walkMillis, moving);
+
+        // The huge head follows the player's view, a little more stiffly than the Goatman's.
+        head.yRot += Mth.clamp(netHeadYaw, -45.0F, 45.0F) * Mth.DEG_TO_RAD;
+        head.xRot += Mth.clamp(headPitch, -40.0F, 40.0F) * 0.5F * Mth.DEG_TO_RAD;
     }
 
-    @Override
-    public void renderToBuffer(PoseStack poseStack, VertexConsumer consumer, int light, int overlay,
-                               float red, float green, float blue, float alpha) {
-        root.render(poseStack, consumer, light, overlay, red, green, blue, alpha);
+    private void play(AnimationDefinition animation, long millis, float weight) {
+        if (weight > 0.001F) {
+            KeyframeAnimations.animate(this, animation, millis, weight, cache);
+        }
+    }
+
+    private static long toMillis(float seconds) {
+        return (long) (seconds * 1000.0F);
     }
 }

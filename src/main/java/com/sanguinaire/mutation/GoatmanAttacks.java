@@ -10,6 +10,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.phys.AABB;
+import org.jetbrains.annotations.Nullable;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraftforge.event.TickEvent;
@@ -27,7 +28,8 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * The Goatman's melee attack follows its animation (0.75 s; the claws land at 0.20 s). Server only.
+ * The Goatman's and Fade Hound's melee attacks follow their animations (both 0.75 s; the Goatman's claws land at
+ * 0.20 s, the Fade Hound's bite at 0.13 s). Server only. The sweep and swipe sound are the Goatman's alone.
  * <p>
  * A Goatman's attack on an entity is held back: the vanilla attack is cancelled, and {@link #HIT_DELAY_TICKS}
  * later the hit is delivered for real (if the target is still alive and in reach). Until the animation is over
@@ -42,8 +44,10 @@ import java.util.UUID;
 public final class GoatmanAttacks {
     /** 0.75 s attack animation. */
     public static final int ATTACK_ANIMATION_TICKS = 15;
-    /** The claws connect 0.20 s in. */
+    /** The Goatman's claws connect 0.20 s in. */
     public static final int HIT_DELAY_TICKS = 4;
+    /** The Fade Hound's bite lands 0.13 s in (2.6 ticks, rounded up). */
+    public static final int FADEHOUND_HIT_DELAY_TICKS = 3;
     /** A little shorter than the animation, so network jitter never swallows a click the client allowed. */
     private static final int SERVER_COOLDOWN_TICKS = ATTACK_ANIMATION_TICKS - 2;
     /** Extra distance the target may move away during the wind-up and still be hit. */
@@ -68,7 +72,7 @@ public final class GoatmanAttacks {
     @SubscribeEvent(priority = EventPriority.HIGH)
     public static void onAttack(AttackEntityEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player) || DELIVERING.contains(player.getUUID())
-                || TransformationManager.getActive(player) != MutationType.GOATMAN) {
+                || !hasDelayedAttack(TransformationManager.getActive(player))) {
             return;
         }
         event.setCanceled(true);
@@ -81,7 +85,8 @@ public final class GoatmanAttacks {
             return; // still mid-swing
         }
         READY_AT.put(player.getUUID(), now + SERVER_COOLDOWN_TICKS);
-        PENDING.put(player.getUUID(), new PendingHit(event.getTarget().getId(), now + HIT_DELAY_TICKS));
+        int delay = TransformationManager.getActive(player) == MutationType.FADEHOUND ? FADEHOUND_HIT_DELAY_TICKS : HIT_DELAY_TICKS;
+        PENDING.put(player.getUUID(), new PendingHit(event.getTarget().getId(), now + delay));
     }
 
     @SubscribeEvent
@@ -98,7 +103,8 @@ public final class GoatmanAttacks {
             }
             iterator.remove();
             ServerPlayer player = event.getServer().getPlayerList().getPlayer(entry.getKey());
-            if (player == null || !player.isAlive() || TransformationManager.getActive(player) != MutationType.GOATMAN) {
+            MutationType type = player == null ? null : TransformationManager.getActive(player);
+            if (player == null || !player.isAlive() || !hasDelayedAttack(type)) {
                 continue;
             }
             Entity target = player.level().getEntity(entry.getValue().targetId());
@@ -114,9 +120,14 @@ public final class GoatmanAttacks {
             DELIVERING.add(player.getUUID());
             try {
                 player.attack(target);
-                sweep(player, target);
+                if (type == MutationType.GOATMAN) {
+                    sweep(player, target);
+                }
             } finally {
                 DELIVERING.remove(player.getUUID());
+            }
+            if (type != MutationType.GOATMAN) {
+                continue; // the Fade Hound's bite has no sweep or swipe sound
             }
             player.level().playSound(null, target.getX(), target.getY(0.5D), target.getZ(), ModSounds.GOATMAN_SWIPE.get(),
                     SoundSource.PLAYERS, 1.3F, 0.55F + player.getRandom().nextFloat() * 0.1F);
@@ -145,6 +156,11 @@ public final class GoatmanAttacks {
         }
         level.sendParticles(ParticleTypes.SWEEP_ATTACK, player.getX() - sinYaw, player.getY(0.6D), player.getZ() + cosYaw,
                 1, 0.0D, 0.0D, 0.0D, 0.0D);
+    }
+
+    /** Creatures whose melee hits wait for their attack animation: the Goatman and the Fade Hound. */
+    public static boolean hasDelayedAttack(@Nullable MutationType type) {
+        return type == MutationType.GOATMAN || type == MutationType.FADEHOUND;
     }
 
     @SubscribeEvent

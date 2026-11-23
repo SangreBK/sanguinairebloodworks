@@ -47,6 +47,12 @@ public enum MutationTrait {
     FADES_WHEN_HIT,
     /** Your melee damage ignores the target's armor. */
     ARMOR_PIERCING,
+    /** Jump one block higher (two blocks in all). */
+    HIGH_JUMP,
+    /** Melee reach +1.5 blocks. */
+    LONG_REACH,
+    /** Walking is as fast as a player's sprint, and sprinting faster still (+30% movement speed). */
+    SWIFT,
     /** At night you are faster and gain Jump Boost. */
     NIGHT_HUNTER,
     /** You burn in sunlight, like undead mobs. */

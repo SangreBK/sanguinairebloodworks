@@ -68,8 +68,11 @@ import java.util.Set;
 public final class TransformationRenderer {
     private static final ResourceLocation GOATMAN_TEXTURE = Sanguinaire.id("textures/entity/goatman.png");
     private static final ResourceLocation ABOMINATION_TEXTURE = Sanguinaire.id("textures/entity/rotting_abomination.png");
-    private static final ResourceLocation FADEHOUND_TEXTURE = Sanguinaire.id("textures/entity/fadehound.png");
-    private static final ResourceLocation FADEHOUND_EYES = Sanguinaire.id("textures/entity/fadehound_eyes.png");
+    /** Nico's Fade Hound texture is split in three layers drawn over the same model: */
+    private static final ResourceLocation FADEHOUND_TEXTURE = Sanguinaire.id("textures/entity/fadehound_solid.png");
+    private static final ResourceLocation FADEHOUND_SEMI = Sanguinaire.id("textures/entity/fadehound_semi.png");
+    private static final float FADEHOUND_SEMI_OPACITY = 0.55F;
+    private static final ResourceLocation FADEHOUND_GLOWING = Sanguinaire.id("textures/entity/fadehound_glowing.png");
     private static final ResourceLocation GUARDIAN_BEAM = new ResourceLocation("textures/entity/guardian_beam.png");
     private static final RenderType BEAM_RENDER_TYPE = RenderType.entityCutoutNoCull(GUARDIAN_BEAM);
 
@@ -329,8 +332,11 @@ public final class TransformationRenderer {
         float tintG = ghost ? 0.5F : 1.0F;
         model.renderToBuffer(poseStack, buffers.getBuffer(bodyType), light, overlay, tintR, tintG, 1.0F, alpha);
         if (type == MutationType.FADEHOUND) {
-            // The four purple eyes glow in the dark (additive, so fading means darkening the colour).
-            model.renderToBuffer(poseStack, buffers.getBuffer(RenderType.eyes(FADEHOUND_EYES)), LightTexture.FULL_BRIGHT,
+            // Semi-transparent layer (the shadowy parts), blended over the solid body at a fixed opacity.
+            model.renderToBuffer(poseStack, buffers.getBuffer(RenderType.entityTranslucent(FADEHOUND_SEMI)), light, overlay,
+                    tintR, tintG, 1.0F, alpha * FADEHOUND_SEMI_OPACITY);
+            // Glowing layer, like an Enderman's eyes: full brightness in the dark, additive (so fading = darkening).
+            model.renderToBuffer(poseStack, buffers.getBuffer(RenderType.eyes(FADEHOUND_GLOWING)), LightTexture.FULL_BRIGHT,
                     OverlayTexture.NO_OVERLAY, alpha, alpha, alpha, 1.0F);
         }
         poseStack.popPose();
