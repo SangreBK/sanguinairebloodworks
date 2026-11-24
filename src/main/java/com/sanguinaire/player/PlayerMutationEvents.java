@@ -32,8 +32,8 @@ public final class PlayerMutationEvents {
     public static void onAttachCapabilities(AttachCapabilitiesEvent<Entity> event) {
         if (event.getObject() instanceof Player) {
             PlayerMutationProvider provider = new PlayerMutationProvider();
+            // No invalidation listener: the data must survive the remove/revive cycle of dimension changes and deaths.
             event.addCapability(PlayerMutationProvider.ID, provider);
-            event.addListener(provider::invalidate);
         }
     }
 
@@ -54,6 +54,7 @@ public final class PlayerMutationEvents {
             TransformationManager.reapply(player);
             ModNetwork.syncMutationData(player);
             ModNetwork.syncResearch(player);
+            ModNetwork.syncSettings(player);
         }
     }
 

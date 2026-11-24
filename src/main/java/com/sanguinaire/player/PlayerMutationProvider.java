@@ -22,7 +22,13 @@ public class PlayerMutationProvider implements ICapabilitySerializable<CompoundT
     public static final ResourceLocation ID = Sanguinaire.id("mutation_data");
 
     private final PlayerMutationData data = new PlayerMutationData();
-    private final LazyOptional<PlayerMutationData> optional = LazyOptional.of(() -> data);
+    /**
+     * Never left invalid for good: Minecraft invalidates an entity's capabilities whenever it is removed from a level
+     * (every dimension change and every death) and revives them afterwards. A permanently invalidated optional made
+     * the data unreachable from then on (transformations lost on dimension change, could not transform again,
+     * Weakened Hearts not copied on death), so a fresh one is handed out whenever the old one was invalidated.
+     */
+    private LazyOptional<PlayerMutationData> optional = LazyOptional.of(() -> data);
 
     public static Optional<PlayerMutationData> get(Player player) {
         return player.getCapability(CAPABILITY).resolve();
@@ -30,6 +36,9 @@ public class PlayerMutationProvider implements ICapabilitySerializable<CompoundT
 
     @Override
     public <T> @NotNull LazyOptional<T> getCapability(@NotNull Capability<T> cap, @Nullable Direction side) {
+        if (!optional.isPresent()) {
+            optional = LazyOptional.of(() -> data);
+        }
         return CAPABILITY.orEmpty(cap, optional);
     }
 

@@ -257,5 +257,10 @@
   "journal.sanguinaire.mutation.ravager": "The raiders' living battering ram. Villagers scatter at the sight of you and Iron Golems charge to meet you, but every illager, witch and ravager greets you as one of the raid. At will, you let out a ravager's roar that batters every creature close by and hurls it away from you, nearer ones furthest. Recovery: 15 seconds.",
   "advancements.sanguinaire.rust_in_peace.title": "Rust in Peace",
   "advancements.sanguinaire.rust_in_peace.description": "As a Ravager, kill an Iron Golem",
-  "message.sanguinaire.cannot_sleep_transformed": "You can't sleep while transformed"
+  "message.sanguinaire.cannot_sleep_transformed": "You can't sleep while transformed",
+  "message.sanguinaire.cannot_while_transformed": "You can't do that while transformed",
+  "commands.sanguinaire.enablefirstperson.true": "Transformed players can now use first person",
+  "commands.sanguinaire.enablefirstperson.false": "Transformed players are now locked to third person",
+  "commands.sanguinaire.allowtransformationitems.true": "Transformed players can now hold items and use their hotbar",
+  "commands.sanguinaire.allowtransformationitems.false": "Transformed players can no longer hold items; their hotbar is hidden and locked"
 }

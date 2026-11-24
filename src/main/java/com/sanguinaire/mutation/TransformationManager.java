@@ -1,5 +1,9 @@
 package com.sanguinaire.mutation;
 
+import net.minecraft.world.entity.player.Inventory;
+
+import com.sanguinaire.settings.SanguinaireSettings;
+
 import com.sanguinaire.advancement.ModAdvancements;
 import com.sanguinaire.blood.BloodInfusion;
 import com.sanguinaire.blood.BloodType;
@@ -172,6 +176,7 @@ public final class TransformationManager {
         data.setRemainingTicks(type.getDurationTicks() + (data.hasTaintedBlood() ? UtilitySerum.TAINTED_BLOOD_BONUS_TICKS : 0)
                 + (blood != null && blood.type() == BloodType.HUMANOID ? HUMANOID_BLOOD_BONUS_TICKS : 0));
 
+        player.stopRiding(); // no transformed rider on boats, horses or minecarts
         dropForbiddenEquipment(player);
         applyStats(player, type);
         player.refreshDimensions();
@@ -357,15 +362,35 @@ public final class TransformationManager {
 
     // ---- Equipment -------------------------------------------------------------------------------------------
 
-    /** Armor is unequipped and dropped, and so is anything held: only an empty hand is valid while transformed. */
+    /**
+     * Armor and anything held come off while transformed. They are tucked into a free inventory slot (never the
+     * selected hotbar slot) and only dropped when the inventory is full. With {@code /sanguinaire
+     * allowtransformationitems true} the hands are left alone; armor still comes off.
+     */
     private static void dropForbiddenEquipment(ServerPlayer player) {
+        boolean itemsAllowed = SanguinaireSettings.get(player.server).areTransformationItemsAllowed();
         for (EquipmentSlot slot : FORBIDDEN_SLOTS) {
+            if (itemsAllowed && slot.getType() == EquipmentSlot.Type.HAND) {
+                continue;
+            }
             ItemStack stack = player.getItemBySlot(slot);
             if (!stack.isEmpty()) {
                 player.setItemSlot(slot, ItemStack.EMPTY);
-                player.drop(stack, true, false);
+                stash(player, stack);
             }
         }
+    }
+
+    /** Puts a stack into the first empty main-inventory slot other than the selected one, or drops it. */
+    private static void stash(ServerPlayer player, ItemStack stack) {
+        Inventory inventory = player.getInventory();
+        for (int i = 0; i < inventory.items.size(); i++) {
+            if (i != inventory.selected && inventory.items.get(i).isEmpty()) {
+                inventory.items.set(i, stack);
+                return;
+            }
+        }
+        player.drop(stack, true, false);
     }
 
     // ---- Attributes ------------------------------------------------------------------------------------------

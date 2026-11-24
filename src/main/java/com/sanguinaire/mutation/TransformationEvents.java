@@ -1,5 +1,7 @@
 package com.sanguinaire.mutation;
 
+import net.minecraftforge.event.entity.EntityMountEvent;
+
 import net.minecraftforge.event.entity.living.LivingKnockBackEvent;
 
 import net.minecraft.sounds.SoundSource;
@@ -438,6 +440,17 @@ public final class TransformationEvents {
             Entity target = event.getTarget();
             player.level().playSound(null, target.getX(), target.getY(), target.getZ(), SoundEvents.RAVAGER_ATTACK,
                     SoundSource.PLAYERS, 1.0F, 1.0F);
+        }
+    }
+
+    /** Transformed players can't ride anything (boats, horses, minecarts, pigs...). */
+    @SubscribeEvent
+    public static void onMount(EntityMountEvent event) {
+        if (event.isMounting() && event.getEntityMounting() instanceof Player player && TransformationManager.isTransformed(player)) {
+            event.setCanceled(true);
+            if (!player.level().isClientSide()) {
+                player.displayClientMessage(Component.translatable("message.sanguinaire.cannot_while_transformed"), true);
+            }
         }
     }
 

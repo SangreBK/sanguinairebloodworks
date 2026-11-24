@@ -1,5 +1,13 @@
 package com.sanguinaire.network;
 
+import net.minecraft.server.MinecraftServer;
+
+import com.sanguinaire.settings.SanguinaireSettings;
+
+import com.sanguinaire.network.packet.EmptySwingPacket;
+
+import com.sanguinaire.network.packet.SettingsPacket;
+
 import com.sanguinaire.Sanguinaire;
 import com.sanguinaire.network.packet.AbilityAnimationPacket;
 import com.sanguinaire.network.packet.LaserBeamPacket;
@@ -64,6 +72,30 @@ public final class ModNetwork {
                 .decoder(UseAbilityPacket::decode)
                 .consumerMainThread(UseAbilityPacket::handle)
                 .add();
+        CHANNEL.messageBuilder(SettingsPacket.class, id++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(SettingsPacket::encode)
+                .decoder(SettingsPacket::decode)
+                .consumerMainThread(SettingsPacket::handle)
+                .add();
+        CHANNEL.messageBuilder(EmptySwingPacket.class, id++, NetworkDirection.PLAY_TO_SERVER)
+                .encoder(EmptySwingPacket::encode)
+                .decoder(EmptySwingPacket::decode)
+                .consumerMainThread(EmptySwingPacket::handle)
+                .add();
+    }
+
+    /** Sends the world's /sanguinaire rules to one player (on login). */
+    public static void syncSettings(ServerPlayer player) {
+        SanguinaireSettings settings = SanguinaireSettings.get(player.server);
+        CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
+                new SettingsPacket(settings.isFirstPersonAllowed(), settings.areTransformationItemsAllowed()));
+    }
+
+    /** Sends the world's /sanguinaire rules to everyone (after a change). */
+    public static void syncSettingsToAll(MinecraftServer server) {
+        SanguinaireSettings settings = SanguinaireSettings.get(server);
+        CHANNEL.send(PacketDistributor.ALL.noArg(),
+                new SettingsPacket(settings.isFirstPersonAllowed(), settings.areTransformationItemsAllowed()));
     }
 
     /** Sends a player's own research to that player only (research is private). */

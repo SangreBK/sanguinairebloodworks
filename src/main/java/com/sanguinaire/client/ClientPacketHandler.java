@@ -1,5 +1,7 @@
 package com.sanguinaire.client;
 
+import com.sanguinaire.network.packet.SettingsPacket;
+
 import com.sanguinaire.mutation.MutationType;
 import com.sanguinaire.client.render.TransformationRenderer;
 import com.sanguinaire.network.packet.AbilityAnimationPacket;
@@ -22,6 +24,10 @@ public final class ClientPacketHandler {
             TransformationRenderer.playAnimation(packet.playerId(), packet.animation(), minecraft.level.getGameTime(), packet.durationTicks());
             AbilityEffectsClient.onAbility(packet.playerId(), packet.animation(), packet.durationTicks());
         }
+    }
+
+    public static void handleSettings(SettingsPacket packet) {
+        ClientSettings.set(packet.firstPersonAllowed(), packet.transformationItemsAllowed());
     }
 
     public static void handleLaserBeam(LaserBeamPacket packet) {

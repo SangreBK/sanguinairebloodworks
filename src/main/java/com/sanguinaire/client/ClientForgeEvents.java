@@ -1,5 +1,17 @@
 package com.sanguinaire.client;
 
+import com.sanguinaire.network.packet.EmptySwingPacket;
+
+import com.sanguinaire.network.ModNetwork;
+
+import com.sanguinaire.mutation.MutationType;
+
+import net.minecraftforge.event.entity.player.PlayerInteractEvent;
+
+import net.minecraftforge.client.event.InputEvent;
+
+import net.minecraft.client.KeyMapping;
+
 import com.sanguinaire.Sanguinaire;
 import com.sanguinaire.mutation.TransformationManager;
 import com.sanguinaire.player.PlayerMutationData;
@@ -65,21 +77,54 @@ public final class ClientForgeEvents {
     }
 
     /**
-     * While transformed the player is locked out of first person: F5 still cycles between the rear and front
-     * third-person views, but first person is skipped until the transformation ends.
+     * While transformed the player is locked out of first person (unless {@code /sanguinaire enablefirstperson true}):
+     * F5 still cycles between the rear and front third-person views, but first person is skipped.
+     * <p>
+     * Unless {@code /sanguinaire allowtransformationitems true}, the hotbar is also locked: the number keys and the
+     * offhand swap key are swallowed here, before vanilla reads them (scrolling is cancelled in
+     * {@link #onScroll}).
      */
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) {
-            return;
-        }
         Minecraft minecraft = Minecraft.getInstance();
         LocalPlayer player = minecraft.player;
-        if (player == null) {
+        if (player == null || !TransformationManager.isTransformed(player)) {
             return;
         }
-        if (TransformationManager.isTransformed(player) && minecraft.options.getCameraType().isFirstPerson()) {
+        if (event.phase == TickEvent.Phase.START) {
+            if (!ClientSettings.areTransformationItemsAllowed() && minecraft.screen == null) {
+                for (KeyMapping key : minecraft.options.keyHotbarSlots) {
+                    while (key.consumeClick()) {
+                        // swallowed: the selected slot stays put
+                    }
+                }
+                while (minecraft.options.keySwapOffhand.consumeClick()) {
+                    // swallowed
+                }
+            }
+            return;
+        }
+        if (!ClientSettings.isFirstPersonAllowed() && minecraft.options.getCameraType().isFirstPerson()) {
             minecraft.options.setCameraType(CameraType.THIRD_PERSON_BACK);
+        }
+    }
+
+    /** The mouse wheel can't change the selected hotbar slot while transformed (unless items are allowed). */
+    @SubscribeEvent
+    public static void onScroll(InputEvent.MouseScrollingEvent event) {
+        Minecraft minecraft = Minecraft.getInstance();
+        if (minecraft.player != null && minecraft.screen == null && !ClientSettings.areTransformationItemsAllowed()
+                && TransformationManager.isTransformed(minecraft.player)) {
+            event.setCanceled(true);
+        }
+    }
+
+    /** A Ravager's swing at empty air still snaps its jaws: tell the server, which plays the sound for everyone. */
+    @SubscribeEvent
+    public static void onLeftClickEmpty(PlayerInteractEvent.LeftClickEmpty event) {
+        if (event.getEntity() == Minecraft.getInstance().player
+                && TransformationManager.getActive(event.getEntity()) == MutationType.RAVAGER) {
+            ModNetwork.sendToServer(new EmptySwingPacket());
         }
     }
 
@@ -101,14 +146,20 @@ public final class ClientForgeEvents {
         }
     }
 
-    /** Research belongs to the world being left; never carry it into another world or server. */
+    /** Research and world rules belong to the world being left; never carry them into another world or server. */
     @SubscribeEvent
     public static void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
         ClientResearchCache.clear();
+        ClientSettings.reset();
     }
 
     @SubscribeEvent
     public static void onRenderOverlayPre(RenderGuiOverlayEvent.Pre event) {
+        if (event.getOverlay().id().equals(VanillaGuiOverlay.HOTBAR.id()) && !ClientSettings.areTransformationItemsAllowed()
+                && Minecraft.getInstance().player != null && TransformationManager.isTransformed(Minecraft.getInstance().player)) {
+            event.setCanceled(true); // no hotbar while transformed: the hands can't hold anything anyway
+            return;
+        }
         if (event.getOverlay().id().equals(VanillaGuiOverlay.PLAYER_HEALTH.id())
                 && Minecraft.getInstance().gui instanceof ForgeGui gui) {
             if (renderCompactHealth(event, gui)) {

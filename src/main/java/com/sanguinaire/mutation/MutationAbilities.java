@@ -158,6 +158,9 @@ public final class MutationAbilities {
     private static final Map<UUID, Long> DASH_INVULNERABLE_UNTIL = new HashMap<>();
     /** Overworld game time until which a Fade Hound is untouchable while splitting after a hit. */
     private static final Map<UUID, Long> FADE_SPLIT_UNTIL = new HashMap<>();
+    /** Last time a Ravager's miss played its bite sound (anti-spam). */
+    private static final Map<UUID, Long> LAST_EMPTY_SWING = new HashMap<>();
+    private static final int EMPTY_SWING_MIN_TICKS = 8;
 
     private record LaserCharge(int targetId, int totalTicks, int ticksLeft) {
     }
@@ -265,6 +268,7 @@ public final class MutationAbilities {
         LAST_REQUEST.remove(player.getUUID());
         DASH_INVULNERABLE_UNTIL.remove(player.getUUID());
         FADE_SPLIT_UNTIL.remove(player.getUUID());
+        LAST_EMPTY_SWING.remove(player.getUUID());
     }
 
     // ---- Cooldowns -------------------------------------------------------------------------------------------
@@ -611,10 +615,29 @@ public final class MutationAbilities {
         level.sendParticles(ParticleTypes.SQUID_INK, destination.x, destination.y + halfHeight, destination.z, 12, 0.3D, 0.3D, 0.3D, 0.05D);
         level.playSound(null, destination.x, destination.y, destination.z, SoundEvents.ILLUSIONER_MIRROR_MOVE, SoundSource.PLAYERS, 1.0F, 1.2F);
 
-        player.heal(player.getMaxHealth() * 0.5F);
+        // Half the bar, rounded up to whole half hearts, so a hound at half health is mended all the way.
+        player.heal(Mth.ceil(player.getMaxHealth() * 0.5F));
         DASH_INVULNERABLE_UNTIL.put(player.getUUID(), now(player) + DASH_INVULNERABLE_TICKS);
         startCooldown(player, COOLDOWN_DASH, SanguinaireConfig.FADEHOUND.abilityCooldownTicks());
         ModNetwork.playAbilityAnimation(player, ANIMATION_FADEHOUND_DASH, DASH_EFFECT_TICKS);
+    }
+
+    /**
+     * A swing at nothing (reported by the client). The Ravager snaps its jaws: same sound as a landed bite, at most
+     * once every few ticks.
+     */
+    public static void onEmptySwing(ServerPlayer player) {
+        if (TransformationManager.getActive(player) != MutationType.RAVAGER) {
+            return;
+        }
+        long now = now(player);
+        Long last = LAST_EMPTY_SWING.get(player.getUUID());
+        if (last != null && now - last < EMPTY_SWING_MIN_TICKS) {
+            return;
+        }
+        LAST_EMPTY_SWING.put(player.getUUID(), now);
+        Vec3 mouth = player.getEyePosition().add(player.getLookAngle().scale(1.5D));
+        player.level().playSound(null, mouth.x, mouth.y, mouth.z, SoundEvents.RAVAGER_ATTACK, SoundSource.PLAYERS, 1.0F, 1.0F);
     }
 
     /** True while a Fade Hound is still untouchable after its dash. Server only. */
