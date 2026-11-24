@@ -1,5 +1,9 @@
 package com.sanguinaire.client;
 
+import net.minecraft.client.player.Input;
+
+import net.minecraftforge.client.event.MovementInputUpdateEvent;
+
 import com.sanguinaire.Sanguinaire;
 import com.sanguinaire.mutation.GoatmanAttacks;
 import com.sanguinaire.mutation.MutationType;
@@ -19,8 +23,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Client-side timing for the one-shot animations of Nico's animated creatures, read by {@code GoatmanModel} and
- * {@code FadeHoundModel} (both attacks last 0.75 s):
+ * Client-side timing for the one-shot animations of Nico's animated creatures, read by {@code GoatmanModel},
+ * {@code FadeHoundModel} and {@code RottingAbominationModel} (attacks last 0.75 s, the Abomination's 1.125 s):
  * <ul>
  *     <li><b>Attack</b>: starts whenever a Goatman swings (synced to everyone by vanilla's swing packet), unless one
  *     is already playing.</li>
@@ -28,12 +32,12 @@ import java.util.Map;
  * </ul>
  * Start times are kept in each player's own tick count, the same clock the model's {@code ageInTicks} uses.
  * <p>
- * Also holds the local Goatman's attack cooldown: until the 0.75 s attack animation has finished, the attack key
- * neither swings nor hits (mining blocks is left alone). The server enforces the same wait.
+ * Also holds the local player's attack cooldown: until the attack animation has finished, the attack key neither
+ * swings nor hits (mining blocks is left alone). The server enforces the same wait. A Rotting Abomination is also
+ * rooted for the whole attack: its movement input is zeroed while the animation plays.
  */
 @Mod.EventBusSubscriber(modid = Sanguinaire.MOD_ID, value = Dist.CLIENT)
 public final class GoatmanAnimationClient {
-    private static final float ATTACK_SECONDS = GoatmanAttacks.ATTACK_ANIMATION_TICKS / 20.0F;
     private static final float ROAR_SECONDS = 1.0F;
 
     private static final Map<Integer, Integer> ATTACK_STARTS = new HashMap<>();
@@ -48,7 +52,16 @@ public final class GoatmanAnimationClient {
 
     /** Seconds into the player's attack animation, or -1 when none is playing. */
     public static float attackSeconds(Player player, float ageInTicks) {
-        return elapsed(ATTACK_STARTS, player, ageInTicks, ATTACK_SECONDS);
+        return elapsed(ATTACK_STARTS, player, ageInTicks, attackTicks(player) / 20.0F);
+    }
+
+    private static int attackTicks(Player player) {
+        return GoatmanAttacks.attackAnimationTicks(TransformationManager.getActive(player));
+    }
+
+    /** True while the player's attack animation is playing. */
+    public static boolean isAttacking(Player player) {
+        return attackSeconds(player, player.tickCount) >= 0.0F;
     }
 
     /** Seconds into the player's roar animation, or -1 when none is playing. */
@@ -74,7 +87,7 @@ public final class GoatmanAnimationClient {
     private static void startAttack(Player player) {
         Integer start = ATTACK_STARTS.get(player.getId());
         int age = start == null ? Integer.MAX_VALUE : player.tickCount - start;
-        if (age < 0 || age >= GoatmanAttacks.ATTACK_ANIMATION_TICKS) {
+        if (age < 0 || age >= attackTicks(player)) {
             ATTACK_STARTS.put(player.getId(), player.tickCount);
         }
     }
@@ -130,8 +143,25 @@ public final class GoatmanAnimationClient {
             event.setSwingHand(false);
             return;
         }
-        attackReadyAt = now + GoatmanAttacks.ATTACK_ANIMATION_TICKS;
+        attackReadyAt = now + attackTicks(minecraft.player);
         startAttack(minecraft.player); // don't wait for the swing to be noticed next tick
+    }
+
+    /** A Rotting Abomination stands its ground while it attacks: no walking, strafing or jumping. */
+    @SubscribeEvent
+    public static void onMovementInput(MovementInputUpdateEvent event) {
+        Player player = event.getEntity();
+        if (TransformationManager.getActive(player) == MutationType.ROTTING_ABOMINATION && isAttacking(player)) {
+            Input input = event.getInput();
+            input.forwardImpulse = 0.0F;
+            input.leftImpulse = 0.0F;
+            input.up = false;
+            input.down = false;
+            input.left = false;
+            input.right = false;
+            input.jumping = false;
+            input.shiftKeyDown = false;
+        }
     }
 
     @SubscribeEvent

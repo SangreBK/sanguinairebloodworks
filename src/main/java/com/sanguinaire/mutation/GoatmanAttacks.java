@@ -28,8 +28,13 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * The Goatman's and Fade Hound's melee attacks follow their animations (both 0.75 s; the Goatman's claws land at
- * 0.20 s, the Fade Hound's bite at 0.13 s). Server only. The sweep and swipe sound are the Goatman's alone.
+ * The Goatman's, Fade Hound's and Rotting Abomination's melee attacks follow their animations (Goatman and Fade
+ * Hound 0.75 s, claws landing at 0.20 s and the bite at 0.13 s; Abomination 1.125 s, its blow landing at 0.17 s).
+ * Server only. The sweep and swipe sound are the Goatman's alone; the Abomination's hits slow their victim (see
+ * {@code TransformationEvents.onAbominationHit}) and it is rooted while it attacks (client side, see
+ * {@code GoatmanAnimationClient}).
+ * <p>
+ * Timings per creature: {@link #attackAnimationTicks}, {@link #hitDelayTicks}.
  * <p>
  * A Goatman's attack on an entity is held back: the vanilla attack is cancelled, and {@link #HIT_DELAY_TICKS}
  * later the hit is delivered for real (if the target is still alive and in reach). Until the animation is over
@@ -42,14 +47,18 @@ import java.util.UUID;
  */
 @Mod.EventBusSubscriber(modid = Sanguinaire.MOD_ID)
 public final class GoatmanAttacks {
-    /** 0.75 s attack animation. */
+    /** Goatman and Fade Hound: 0.75 s attack animation. */
     public static final int ATTACK_ANIMATION_TICKS = 15;
+    /** Rotting Abomination: 1.125 s attack animation (22.5 ticks, rounded up). */
+    public static final int ABOMINATION_ATTACK_ANIMATION_TICKS = 23;
     /** The Goatman's claws connect 0.20 s in. */
     public static final int HIT_DELAY_TICKS = 4;
     /** The Fade Hound's bite lands 0.13 s in (2.6 ticks, rounded up). */
     public static final int FADEHOUND_HIT_DELAY_TICKS = 3;
-    /** A little shorter than the animation, so network jitter never swallows a click the client allowed. */
-    private static final int SERVER_COOLDOWN_TICKS = ATTACK_ANIMATION_TICKS - 2;
+    /** The Abomination's blow lands 0.17 s in (3.4 ticks). */
+    public static final int ABOMINATION_HIT_DELAY_TICKS = 3;
+    /** The server cooldown is a little shorter than the animation, so network jitter never swallows a click the client allowed. */
+    private static final int SERVER_COOLDOWN_SLACK_TICKS = 2;
     /** Extra distance the target may move away during the wind-up and still be hit. */
     private static final double REACH_TOLERANCE = 1.5D;
     /** Damage dealt to everything else caught in the swipe. */
@@ -84,9 +93,9 @@ public final class GoatmanAttacks {
         if (now < READY_AT.getOrDefault(player.getUUID(), 0)) {
             return; // still mid-swing
         }
-        READY_AT.put(player.getUUID(), now + SERVER_COOLDOWN_TICKS);
-        int delay = TransformationManager.getActive(player) == MutationType.FADEHOUND ? FADEHOUND_HIT_DELAY_TICKS : HIT_DELAY_TICKS;
-        PENDING.put(player.getUUID(), new PendingHit(event.getTarget().getId(), now + delay));
+        MutationType type = TransformationManager.getActive(player);
+        READY_AT.put(player.getUUID(), now + attackAnimationTicks(type) - SERVER_COOLDOWN_SLACK_TICKS);
+        PENDING.put(player.getUUID(), new PendingHit(event.getTarget().getId(), now + hitDelayTicks(type)));
     }
 
     @SubscribeEvent
@@ -127,7 +136,7 @@ public final class GoatmanAttacks {
                 DELIVERING.remove(player.getUUID());
             }
             if (type != MutationType.GOATMAN) {
-                continue; // the Fade Hound's bite has no sweep or swipe sound
+                continue; // the Fade Hound's bite and the Abomination's blow have no sweep or swipe sound
             }
             player.level().playSound(null, target.getX(), target.getY(0.5D), target.getZ(), ModSounds.GOATMAN_SWIPE.get(),
                     SoundSource.PLAYERS, 1.3F, 0.55F + player.getRandom().nextFloat() * 0.1F);
@@ -158,9 +167,22 @@ public final class GoatmanAttacks {
                 1, 0.0D, 0.0D, 0.0D, 0.0D);
     }
 
-    /** Creatures whose melee hits wait for their attack animation: the Goatman and the Fade Hound. */
+    /** Creatures whose melee hits wait for their attack animation: the Goatman, the Fade Hound, the Abomination. */
     public static boolean hasDelayedAttack(@Nullable MutationType type) {
-        return type == MutationType.GOATMAN || type == MutationType.FADEHOUND;
+        return type == MutationType.GOATMAN || type == MutationType.FADEHOUND || type == MutationType.ROTTING_ABOMINATION;
+    }
+
+    /** Length of the creature's attack animation, which is also the time between attacks. */
+    public static int attackAnimationTicks(@Nullable MutationType type) {
+        return type == MutationType.ROTTING_ABOMINATION ? ABOMINATION_ATTACK_ANIMATION_TICKS : ATTACK_ANIMATION_TICKS;
+    }
+
+    /** Ticks from the swing to the moment the hit lands. */
+    public static int hitDelayTicks(@Nullable MutationType type) {
+        if (type == MutationType.FADEHOUND) {
+            return FADEHOUND_HIT_DELAY_TICKS;
+        }
+        return type == MutationType.ROTTING_ABOMINATION ? ABOMINATION_HIT_DELAY_TICKS : HIT_DELAY_TICKS;
     }
 
     @SubscribeEvent

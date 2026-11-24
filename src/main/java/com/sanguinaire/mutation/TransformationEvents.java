@@ -1,5 +1,7 @@
 package com.sanguinaire.mutation;
 
+import net.minecraft.world.damagesource.DamageTypes;
+
 import com.sanguinaire.network.ModNetwork;
 
 import com.sanguinaire.player.PlayerMutationProvider;
@@ -484,6 +486,24 @@ public final class TransformationEvents {
             }
         });
     }
+
+    /**
+     * The Rotting Abomination's melee blows leave their victim staggering: Slowness V for 1 second whenever one deals
+     * damage. Not listed among its passives.
+     */
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    public static void onAbominationHit(LivingDamageEvent event) {
+        if (event.getAmount() > 0.0F && event.getSource().is(DamageTypes.PLAYER_ATTACK)
+                && event.getSource().getDirectEntity() instanceof ServerPlayer player
+                && TransformationManager.getActive(player) == MutationType.ROTTING_ABOMINATION) {
+            event.getEntity().addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, ABOMINATION_SLOW_TICKS,
+                    ABOMINATION_SLOW_AMPLIFIER), player);
+        }
+    }
+
+    /** Slowness V (amplifier 4) for 1 second. */
+    private static final int ABOMINATION_SLOW_TICKS = 20;
+    private static final int ABOMINATION_SLOW_AMPLIFIER = 4;
 
     /** Transformed players can't ride anything (boats, horses, minecarts, pigs...). */
     @SubscribeEvent

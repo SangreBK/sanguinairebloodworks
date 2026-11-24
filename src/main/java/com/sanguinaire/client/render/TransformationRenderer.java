@@ -87,6 +87,13 @@ import java.util.Set;
 public final class TransformationRenderer {
     private static final ResourceLocation GOATMAN_TEXTURE = Sanguinaire.id("textures/entity/goatman.png");
     private static final ResourceLocation ABOMINATION_TEXTURE = Sanguinaire.id("textures/entity/rotting_abomination.png");
+    /** Nico's Abomination art: the normal skin, the skin while it vomits, and the glowing eyes drawn over either. */
+    private static final ResourceLocation ABOMINATION_VOMIT_TEXTURE = Sanguinaire.id("textures/entity/rotting_abomination_vomit.png");
+    private static final ResourceLocation ABOMINATION_GLOWING = Sanguinaire.id("textures/entity/rotting_abomination_glowing.png");
+    /** How long the vomiting skin stays on after the bile ability: 2 seconds. */
+    private static final int ABOMINATION_VOMIT_SKIN_TICKS = 40;
+    /** Player id → client game time until which the Abomination wears its vomiting skin. */
+    private static final Map<Integer, Long> VOMIT_SKIN_UNTIL = new HashMap<>();
     /** Nico's Fade Hound texture is split in three layers drawn over the same model: */
     private static final ResourceLocation FADEHOUND_TEXTURE = Sanguinaire.id("textures/entity/fadehound_solid.png");
     private static final ResourceLocation FADEHOUND_SEMI = Sanguinaire.id("textures/entity/fadehound_semi.png");
@@ -159,6 +166,9 @@ public final class TransformationRenderer {
         if (kind == MutationAbilities.ANIMATION_WOLF_RAGE) {
             WOLF_RAGE_UNTIL.put(playerId, gameTime + durationTicks);
             return;
+        }
+        if (kind == MutationAbilities.ANIMATION_ABOMINATION_VOMIT) {
+            VOMIT_SKIN_UNTIL.put(playerId, gameTime + ABOMINATION_VOMIT_SKIN_TICKS); // and the usual particles below
         }
         ANIMATIONS.put(playerId, new Animation(kind, gameTime, durationTicks));
     }
@@ -373,7 +383,12 @@ public final class TransformationRenderer {
                             Minecraft.getInstance().getEntityModels().bakeLayer(ModModelLayers.ROTTING_ABOMINATION));
                 }
                 model = abominationModel;
-                texture = ABOMINATION_TEXTURE;
+                Long vomitUntil = VOMIT_SKIN_UNTIL.get(player.getId());
+                boolean vomiting = vomitUntil != null && player.level().getGameTime() < vomitUntil;
+                if (vomitUntil != null && !vomiting) {
+                    VOMIT_SKIN_UNTIL.remove(player.getId());
+                }
+                texture = vomiting ? ABOMINATION_VOMIT_TEXTURE : ABOMINATION_TEXTURE;
             }
             case FADEHOUND -> {
                 if (fadeHoundModel == null) {
@@ -409,6 +424,11 @@ public final class TransformationRenderer {
         float tintR = ghost ? 0.62F : 1.0F;
         float tintG = ghost ? 0.5F : 1.0F;
         model.renderToBuffer(poseStack, buffers.getBuffer(bodyType), light, overlay, tintR, tintG, 1.0F, alpha);
+        if (type == MutationType.ROTTING_ABOMINATION) {
+            // Glowing eyes, full bright like an Enderman's.
+            model.renderToBuffer(poseStack, buffers.getBuffer(RenderType.eyes(ABOMINATION_GLOWING)), LightTexture.FULL_BRIGHT,
+                    OverlayTexture.NO_OVERLAY, alpha, alpha, alpha, 1.0F);
+        }
         if (type == MutationType.FADEHOUND) {
             // Semi-transparent layer (the shadowy parts), blended over the solid body at a fixed opacity.
             model.renderToBuffer(poseStack, buffers.getBuffer(RenderType.entityTranslucent(FADEHOUND_SEMI)), light, overlay,

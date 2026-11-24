@@ -117,6 +117,8 @@ public final class TransformationManager {
     private static final UUID SWIFT_ID = UUID.fromString("5b0c9d7e-1f43-4a7e-9a1d-0c6a3e0b7a0b");
     /** SWIFT: vanilla sprinting is +30%, so +30% makes walking as fast as a normal sprint (and sprinting faster). */
     private static final double SWIFT_BONUS = 0.3D;
+    /** Form-wide speed change (MutationType#getSpeedMultiplierBonus, e.g. the Abomination's -30%). */
+    private static final UUID FORM_SPEED_ID = UUID.fromString("c3d1e8a4-6b2f-4f0d-8e5a-7a9b0c1d2e3f");
     /** Speed I: +20% movement speed. */
     private static final double NIGHT_SPEED_BONUS = 0.2D;
     private static final double WARDEN_CALM_RADIUS = 48.0D;
@@ -445,6 +447,8 @@ public final class TransformationManager {
         applyReach(player, type.getReachBonus());
         applyTraitModifier(player.getAttribute(Attributes.MOVEMENT_SPEED), SWIFT_ID, "Sanguinaire swiftness",
                 type.hasTrait(MutationTrait.SWIFT), SWIFT_BONUS, AttributeModifier.Operation.MULTIPLY_TOTAL);
+        applyTraitModifier(player.getAttribute(Attributes.MOVEMENT_SPEED), FORM_SPEED_ID, "Sanguinaire form speed",
+                type.getSpeedMultiplierBonus() != 0.0D, type.getSpeedMultiplierBonus(), AttributeModifier.Operation.MULTIPLY_TOTAL);
     }
 
     /** Melee reach bonus of the current form (Fade Hound +1.5, Goatman +0.5), replaced whenever the amount changes. */
@@ -513,6 +517,7 @@ public final class TransformationManager {
         if (speed != null) {
             speed.removeModifier(NIGHT_SPEED_ID);
             speed.removeModifier(SWIFT_ID);
+            speed.removeModifier(FORM_SPEED_ID);
         }
         AttributeInstance reach = player.getAttribute(ForgeMod.ENTITY_REACH.get());
         if (reach != null) {

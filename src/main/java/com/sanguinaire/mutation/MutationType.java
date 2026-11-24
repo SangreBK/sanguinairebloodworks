@@ -158,7 +158,8 @@ public enum MutationType {
             // Attack speed only sets how long a hit takes to recharge to full strength; the Goatman's real pace is set by
             // its 0.75 s attack animation (GoatmanAttacks). 2.0 recharges in 10 ticks, well inside that.
             case GOATMAN -> configured(SanguinaireConfig.GOATMAN, 0.30, GOATMAN_ATTACK_SPEED);
-            case ROTTING_ABOMINATION -> configured(SanguinaireConfig.ROTTING_ABOMINATION, 1.00, TransformationStats.AXE_ATTACK_SPEED);
+            // Same as the Goatman: the 1.125 s attack animation sets the real pace, so every hit lands at full strength.
+            case ROTTING_ABOMINATION -> configured(SanguinaireConfig.ROTTING_ABOMINATION, 1.00, GOATMAN_ATTACK_SPEED);
             case FADEHOUND -> configured(SanguinaireConfig.FADEHOUND, 0.00, TransformationStats.SWORD_ATTACK_SPEED);
             case CREEPER -> TransformationStats.ofMob(EntityType.CREEPER, false);
             case ZOMBIE -> TransformationStats.ofMob(EntityType.ZOMBIE, true);
@@ -373,6 +374,14 @@ public enum MutationType {
      */
     public float getKnockbackBonus() {
         return this == ROTTING_ABOMINATION ? 1.5F : 0.0F;
+    }
+
+    /**
+     * Permanent change to movement speed while in this form (MULTIPLY_TOTAL), not shown as a passive: the Rotting
+     * Abomination drags itself along on its arms, 30% slower.
+     */
+    public double getSpeedMultiplierBonus() {
+        return this == ROTTING_ABOMINATION ? -0.3D : 0.0D;
     }
 
     /** Eye height for the transformed hitbox: vanilla's default for living entities (85% of the height). */
