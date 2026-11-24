@@ -84,7 +84,7 @@ import java.util.UUID;
  *     <li>Fade Hound shadow dash: 4 s (only after a successful dash)</li>
  *     <li>Spider / Cave Spider stealth: 8 s</li>
  *     <li>Zombie / Husk / Drowned call of the horde: 30 s</li>
- *     <li>Phantom swoop: 4 s (only while flying)</li>
+ *     <li>Phantom swoop: 3 s (only while flying)</li>
  *     <li>Goat ram: 8 s</li>
  *     <li>Wolf rage: 8 s</li>
  * </ul>
@@ -119,13 +119,13 @@ public final class MutationAbilities {
     private static final double HORDE_RADIUS = 20.0D;
     /** Followers further away than this lose track of the player. */
     private static final double HORDE_LEASH = 48.0D;
-    private static final int SWOOP_COOLDOWN_TICKS = 4 * 20;
+    private static final int SWOOP_COOLDOWN_TICKS = 3 * 20;
     private static final int RAM_COOLDOWN_TICKS = 8 * 20;
     private static final int WOLF_RAGE_TICKS = 8 * 20;
     private static final int WOLF_RAGE_COOLDOWN_TICKS = 8 * 20;
     /** Dashes push the player every tick for a few ticks: speed x ticks = distance. */
     private static final int DASH_PUSH_TICKS = 4;
-    private static final double SWOOP_SPEED = 6.0D / DASH_PUSH_TICKS;
+    private static final double SWOOP_SPEED = 8.0D / DASH_PUSH_TICKS;
     private static final double RAM_SPEED = 5.0D / DASH_PUSH_TICKS;
     private static final float DASH_HIT_DAMAGE = 2.0F;
     /** Charged creeper blast: vanilla doubles the radius of a charged creeper. */
@@ -785,7 +785,7 @@ public final class MutationAbilities {
 
     // ---- Phantom / Goat dashes ---------------------------------------------------------------------------------
 
-    /** Phantom: shrieks and swoops 6 blocks along the look direction; only while flying. */
+    /** Phantom: shrieks and swoops 8 blocks along the look direction; only while flying. */
     private static void swoop(ServerPlayer player) {
         if (!player.getAbilities().flying) {
             player.displayClientMessage(Component.translatable("message." + Sanguinaire.MOD_ID + ".swoop_needs_flight"), true);

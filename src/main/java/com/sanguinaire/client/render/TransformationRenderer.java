@@ -1,5 +1,7 @@
 package com.sanguinaire.client.render;
 
+import net.minecraft.world.entity.monster.Phantom;
+
 import java.lang.reflect.Modifier;
 
 import java.lang.reflect.Field;
@@ -258,8 +260,15 @@ public final class TransformationRenderer {
         puppet.zOld = player.zOld;
         puppet.setYRot(player.getYRot());
         puppet.yRotO = player.yRotO;
-        puppet.setXRot(player.getXRot());
-        puppet.xRotO = player.xRotO;
+        if (puppet instanceof Phantom) {
+            // The Phantom renderer tilts the body by its pitch with the opposite sign to a player's view pitch
+            // (positive = nose up), so the model looked down when the player looked up.
+            puppet.setXRot(-player.getXRot());
+            puppet.xRotO = -player.xRotO;
+        } else {
+            puppet.setXRot(player.getXRot());
+            puppet.xRotO = player.xRotO;
+        }
         puppet.yBodyRot = player.yBodyRot;
         puppet.yBodyRotO = player.yBodyRotO;
         puppet.yHeadRot = player.yHeadRot;
@@ -577,7 +586,25 @@ public final class TransformationRenderer {
             if (puppet instanceof PuppetRavager ravager) {
                 ravager.tickAnimations(player);
             }
+            if (puppet instanceof Phantom phantom && !player.isInvisible()) {
+                spawnPhantomWingParticles(player, phantom);
+            }
         }
+    }
+
+    /**
+     * The mycelium specks a Phantom constantly sheds from its wingtips (vanilla Phantom#tick, client side; puppets
+     * never tick, so it is repeated here), following the flap of the wings.
+     */
+    private static void spawnPhantomWingParticles(Player player, Phantom phantom) {
+        float flap = Mth.cos((phantom.getUniqueFlapTickOffset() + player.tickCount) * 7.448451F * Mth.DEG_TO_RAD + Mth.PI);
+        float yaw = player.yBodyRot * Mth.DEG_TO_RAD;
+        float sideX = Mth.cos(yaw) * 1.3F;
+        float sideZ = Mth.sin(yaw) * 1.3F;
+        float height = 0.3F + flap * 0.45F;
+        Level level = player.level();
+        level.addParticle(ParticleTypes.MYCELIUM, player.getX() + sideX, player.getY() + height, player.getZ() + sideZ, 0.0D, 0.0D, 0.0D);
+        level.addParticle(ParticleTypes.MYCELIUM, player.getX() - sideX, player.getY() + height, player.getZ() - sideZ, 0.0D, 0.0D, 0.0D);
     }
 
     // ---- Ravager puppet ---------------------------------------------------------------------------------------

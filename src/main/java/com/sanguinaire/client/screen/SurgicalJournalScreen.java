@@ -1,5 +1,7 @@
 package com.sanguinaire.client.screen;
 
+import net.minecraft.client.resources.language.I18n;
+
 import com.sanguinaire.Sanguinaire;
 import com.sanguinaire.blood.BloodType;
 import com.sanguinaire.bodypart.BodyPartDropTable;
@@ -387,6 +389,13 @@ public class SurgicalJournalScreen extends Screen {
                 : Component.translatable(PREFIX + "formula_partial", known), known == 3 ? RUBRIC : FADED_INK);
         addSpacer(lines);
 
+        // The active ability gets its own section above the passive effects (when the form has one).
+        String abilityKey = type.getDescriptionKey() + ".ability";
+        if (I18n.exists(abilityKey)) {
+            addHeading(lines, "ability");
+            addWrapped(lines, Component.translatable(abilityKey), INK);
+            addSpacer(lines);
+        }
         addHeading(lines, "effects");
         addWrapped(lines, Component.translatable(type.getDescriptionKey()), INK);
     }
