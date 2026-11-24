@@ -91,7 +91,7 @@ public final class TransformationSounds {
             event.setSound(null);
             return;
         }
-        event.setSound(new SimpleSoundInstance(step.sound(), SoundSource.PLAYERS, step.volume(), 1.0F,
+        event.setSound(new SimpleSoundInstance(step.sound(), SoundSource.PLAYERS, step.volume(), step.pitch(),
                 SoundInstance.createUnseededRandom(), sound.getX(), sound.getY(), sound.getZ()));
     }
 

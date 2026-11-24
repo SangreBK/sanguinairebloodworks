@@ -43,5 +43,35 @@
         "type": "event"
       }
     ]
+  },
+  "goatman_idle": {
+    "subtitle": "subtitles.sanguinaire.goatman_idle",
+    "sounds": [
+      "sanguinaire:entity/goatman_idle"
+    ]
+  },
+  "goatman_step": {
+    "subtitle": "subtitles.sanguinaire.goatman_step",
+    "sounds": [
+      "sanguinaire:entity/goatman_step"
+    ]
+  },
+  "abomination_idle": {
+    "subtitle": "subtitles.sanguinaire.abomination_idle",
+    "sounds": [
+      "sanguinaire:entity/abomination_idle"
+    ]
+  },
+  "abomination_step": {
+    "subtitle": "subtitles.sanguinaire.abomination_step",
+    "sounds": [
+      "sanguinaire:entity/abomination_step"
+    ]
+  },
+  "fadehound_ambient": {
+    "subtitle": "subtitles.sanguinaire.fadehound_ambient",
+    "sounds": [
+      "sanguinaire:entity/fadehound_ambience"
+    ]
   }
 }

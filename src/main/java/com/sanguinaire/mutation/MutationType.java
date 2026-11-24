@@ -4,6 +4,7 @@ import com.sanguinaire.config.SanguinaireConfig;
 
 import com.sanguinaire.Sanguinaire;
 import com.sanguinaire.registry.ModItems;
+import com.sanguinaire.registry.ModSounds;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
@@ -293,8 +294,17 @@ public enum MutationType {
     }
 
     /** A footstep replacement: the sound to play instead of the block's step sound, or silence if {@code sound} is null. */
-    public record StepSound(@Nullable SoundEvent sound, float volume) {
+    /** Volume of the custom creatures' recorded footsteps. */
+    private static final float CUSTOM_STEP_VOLUME = 0.5F;
+    /** Fade Hound footsteps: the wolf's step at the lowest pitch Minecraft can play (0.5). */
+    private static final float FADEHOUND_STEP_PITCH = 0.5F;
+
+    public record StepSound(@Nullable SoundEvent sound, float volume, float pitch) {
         public static final StepSound SILENT = new StepSound(null, 0.0F);
+
+        public StepSound(@Nullable SoundEvent sound, float volume) {
+            this(sound, volume, 1.0F);
+        }
     }
 
     /**
@@ -316,7 +326,10 @@ public enum MutationType {
             case GUARDIAN -> inWater ? StepSound.SILENT : new StepSound(SoundEvents.GUARDIAN_FLOP, 0.6F);
             case ELDER_GUARDIAN -> inWater ? StepSound.SILENT : new StepSound(SoundEvents.ELDER_GUARDIAN_FLOP, 0.6F);
             case PHANTOM, GHAST -> StepSound.SILENT;
-            case CREEPER, ENDERMAN, VILLAGER, GOATMAN, ROTTING_ABOMINATION, FADEHOUND -> null;
+            case GOATMAN -> new StepSound(ModSounds.GOATMAN_STEP.get(), CUSTOM_STEP_VOLUME);
+            case ROTTING_ABOMINATION -> new StepSound(ModSounds.ABOMINATION_STEP.get(), CUSTOM_STEP_VOLUME);
+            case FADEHOUND -> new StepSound(SoundEvents.WOLF_STEP, 0.15F, FADEHOUND_STEP_PITCH); // a wolf's, much deeper
+            case CREEPER, ENDERMAN, VILLAGER -> null;
         };
     }
 
@@ -338,7 +351,22 @@ public enum MutationType {
             case WOLF -> SoundEvents.WOLF_AMBIENT;
             case GOAT -> SoundEvents.GOAT_AMBIENT;
             case RAVAGER -> SoundEvents.RAVAGER_AMBIENT;
-            case CREEPER, GOATMAN, ROTTING_ABOMINATION, FADEHOUND -> null; // creepers are silent until they hiss
+            case FADEHOUND -> ModSounds.FADEHOUND_AMBIENT.get();
+            // Creepers are silent until they hiss; the Goatman and Abomination have a looping idle sound instead.
+            case CREEPER, GOATMAN, ROTTING_ABOMINATION -> null;
+        };
+    }
+
+    /**
+     * A sound that loops without pause for as long as the transformation lasts (played on each client by
+     * {@code client.IdleLoopSounds}, following the player), or null for none.
+     */
+    @Nullable
+    public SoundEvent getIdleLoopSound() {
+        return switch (this) {
+            case GOATMAN -> ModSounds.GOATMAN_IDLE.get();
+            case ROTTING_ABOMINATION -> ModSounds.ABOMINATION_IDLE.get();
+            default -> null;
         };
     }
 
