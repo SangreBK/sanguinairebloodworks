@@ -13,12 +13,9 @@ public class SanguineAlembicScreen extends MachineScreen<SanguineAlembicMenu> {
     private static final int STATUS_BOX_TOP = 17;
     private static final int STATUS_BOX_BOTTOM = 47;
     private static final int STATUS_BOX_WIDTH = 52;
-    /** Sits in the dark strip just above the gold line (y = 78) that frames the inventory. */
-    private static final int INVENTORY_LABEL_Y = 69;
 
     public SanguineAlembicScreen(SanguineAlembicMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title, Sanguinaire.id("textures/gui/sanguine_alembic.png"));
-        this.inventoryLabelY = INVENTORY_LABEL_Y;
     }
 
     @Override
@@ -46,6 +43,7 @@ public class SanguineAlembicScreen extends MachineScreen<SanguineAlembicMenu> {
             case SanguineAlembicBlockEntity.STATUS_ALREADY_ALTERED -> "already_altered";
             case SanguineAlembicBlockEntity.STATUS_RESULT_OCCUPIED -> "result_occupied";
             case SanguineAlembicBlockEntity.STATUS_NEEDS_BLOOD -> "needs_blood";
+            case SanguineAlembicBlockEntity.STATUS_DUPLICATE_EFFECT -> "duplicate_effect";
             default -> "idle";
         };
     }

@@ -1,5 +1,7 @@
 package com.sanguinaire.registry;
 
+import com.sanguinaire.item.VileCaneItem;
+
 import com.sanguinaire.Sanguinaire;
 import com.sanguinaire.item.SerumBriefcaseItem;
 import com.sanguinaire.item.BloodSampleItem;
@@ -53,6 +55,10 @@ public final class ModItems {
 
     public static final RegistryObject<SerumBriefcaseItem> SERUM_BRIEFCASE = ITEMS.register("serum_briefcase",
             () -> new SerumBriefcaseItem(new Item.Properties().stacksTo(1)));
+
+    /** Cane / sword for the heavily decayed. Durability 2000, repaired with gold. */
+    public static final RegistryObject<VileCaneItem> VILE_CANE = ITEMS.register("vile_cane",
+            () -> new VileCaneItem(new Item.Properties().durability(2000)));
 
     // ---- Body parts ----------------------------------------------------------------------------------------------
     // Zombie family

@@ -24,6 +24,7 @@ public final class ModCreativeTabs {
             .icon(() -> new ItemStack(ModItems.SURGICAL_SAW.get()))
             .displayItems((parameters, output) -> {
                 output.accept(ModItems.SURGICAL_SAW.get());
+                output.accept(ModItems.VILE_CANE.get());
                 output.accept(ModItems.SURGICAL_JOURNAL.get());
                 output.accept(ModBlocks.RESEARCH_STATION.get());
                 output.accept(ModBlocks.SERUM_SYNTHESIZER.get());

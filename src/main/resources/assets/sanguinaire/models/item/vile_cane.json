@@ -1,0 +1,14 @@
+{
+  "parent": "minecraft:item/handheld",
+  "textures": {
+    "layer0": "sanguinaire:item/vile_cane"
+  },
+  "overrides": [
+    {
+      "predicate": {
+        "sanguinaire:sword_mode": 1
+      },
+      "model": "sanguinaire:item/vile_cane_sword"
+    }
+  ]
+}

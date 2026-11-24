@@ -290,8 +290,7 @@ public final class TransformationManager {
             case HUMANOID -> {
             }
         }
-        MobEffectInstance bound = blood.effect();
-        if (bound != null) {
+        for (MobEffectInstance bound : blood.effects()) {
             if (bound.getEffect().isInstantenous()) {
                 bound.getEffect().applyInstantenousEffect(null, null, player, bound.getAmplifier(), 1.0D);
             } else {

@@ -28,6 +28,8 @@ public abstract class MachineScreen<T extends MachineMenu> extends AbstractConta
     protected static final int STATUS_X = 100;
     protected static final int STATUS_Y = 40;
     protected static final int STATUS_WIDTH = 70;
+    /** "Inventory" sits inside the panel, just above the gold line (y = 78) Nico drew over the player inventory. */
+    protected static final int INVENTORY_LABEL_Y = 69;
 
     private final ResourceLocation texture;
 
@@ -36,7 +38,7 @@ public abstract class MachineScreen<T extends MachineMenu> extends AbstractConta
         this.texture = texture;
         this.imageWidth = 176;
         this.imageHeight = 166;
-        this.inventoryLabelY = MachineMenu.PLAYER_INVENTORY_Y - 11;
+        this.inventoryLabelY = INVENTORY_LABEL_Y;
     }
 
     /** Translation key describing the machine's current status. */

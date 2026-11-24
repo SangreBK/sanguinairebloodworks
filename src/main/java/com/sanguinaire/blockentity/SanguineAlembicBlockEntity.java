@@ -24,10 +24,11 @@ import org.jetbrains.annotations.Nullable;
 import java.util.List;
 
 /**
- * Sanguine Alembic: binds one potion effect to a Blood Sample. Top left: a Blood Sample (not yet altered). Top right:
- * a drinkable potion. After 30 seconds the sample comes out in the result slot as an <b>Altered Blood Sample</b>
- * carrying the potion's effect (its first, for potions with several), and the potion leaves an empty Glass Bottle
- * behind. Nothing is consumed until the process finishes; taking an input out resets the progress.
+ * Sanguine Alembic: binds potion effects to a Blood Sample, one per pass, up to
+ * {@value BloodSampleItem#MAX_EFFECTS} different effects. Top left: a Blood Sample (fresh or already altered). Top
+ * right: a drinkable potion. After 30 seconds the sample comes out in the result slot as an <b>Altered Blood
+ * Sample</b> carrying the potion's effect too (its first, for potions with several), and the potion leaves an empty
+ * Glass Bottle behind. A sample that is full, or already carries that effect, is refused. Nothing is consumed until the process finishes; taking an input out resets the progress.
  * <p>
  * A serum brewed with altered blood applies that effect when its transformation ends. Hoppers feed blood and
  * potions in, and may take results and empty bottles out. Each altered sample releases {@value #EXPERIENCE}
@@ -50,6 +51,7 @@ public class SanguineAlembicBlockEntity extends MachineBlockEntity {
     public static final int STATUS_ALREADY_ALTERED = 4;
     public static final int STATUS_RESULT_OCCUPIED = 5;
     public static final int STATUS_NEEDS_BLOOD = 6;
+    public static final int STATUS_DUPLICATE_EFFECT = 7;
 
     private static final String TAG_PROGRESS = "Progress";
 
@@ -173,14 +175,18 @@ public class SanguineAlembicBlockEntity extends MachineBlockEntity {
         if (blood.isEmpty()) {
             return potion.isEmpty() ? STATUS_IDLE : STATUS_NEEDS_BLOOD;
         }
-        if (BloodSampleItem.isAltered(blood)) {
-            return STATUS_ALREADY_ALTERED;
+        if (BloodSampleItem.getEffects(blood).size() >= BloodSampleItem.MAX_EFFECTS) {
+            return STATUS_ALREADY_ALTERED; // full
         }
         if (!potion.is(Items.POTION)) {
             return STATUS_NEEDS_POTION;
         }
-        if (potionEffect(potion) == null) {
+        MobEffectInstance effect = potionEffect(potion);
+        if (effect == null) {
             return STATUS_NO_EFFECT;
+        }
+        if (BloodSampleItem.hasEffect(blood, effect)) {
+            return STATUS_DUPLICATE_EFFECT;
         }
         if (!inventory.getStackInSlot(SLOT_RESULT).isEmpty()) {
             return STATUS_RESULT_OCCUPIED;

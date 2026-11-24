@@ -243,10 +243,7 @@ public class SerumItem extends Item {
             if (blood != null) {
                 tooltip.add(Component.translatable("tooltip." + Sanguinaire.MOD_ID + ".serum.blood", blood.type().getDisplayName())
                         .withStyle(ChatFormatting.DARK_RED));
-                if (blood.effect() != null) {
-                    tooltip.add(Component.translatable("tooltip." + Sanguinaire.MOD_ID + ".blood.infused", BloodSampleItem.describeEffect(blood.effect()))
-                            .withStyle(blood.effect().getEffect().getCategory().getTooltipFormatting()));
-                }
+                BloodSampleItem.addEffectLines(blood.effects(), tooltip);
             }
         } else if (getUtility(stack) != null) {
             tooltip.add(Component.translatable("tooltip." + Sanguinaire.MOD_ID + ".serum.utility").withStyle(ChatFormatting.DARK_GRAY));

@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/handheld",
+  "textures": {
+    "layer0": "sanguinaire:item/vile_cane_sword"
+  }
+}

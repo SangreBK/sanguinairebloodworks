@@ -66,11 +66,10 @@ public final class BodyPartDropTable {
                 e(ModItems.SPIKED_HEART, 25), e(ModItems.OILY_FLESH, 10), e(ModItems.ELDER_GUARDIAN_EYE, 5)));
         map.put(EntityType.WARDEN, List.of(
                 e(ModItems.DENSE_RIB, 25), e(ModItems.RESONATING_ANTLER, 10), e(ModItems.BOOMING_DIAPHRAGM, 5)));
+        // Only the Ravager among the raiders yields specimens for now (Pillagers, Vindicators and Evokers removed
+        // 2026-11-24): Tough Flesh, Illager Nose and Giant Tooth, the three Ravager serum ingredients.
         map.put(EntityType.RAVAGER, List.of(
-                e(ModItems.TOUGH_FLESH, 25), e(ModItems.GIANT_TOOTH, 10)));
-        map.put(EntityType.PILLAGER, List.of(e(ModItems.ILLAGER_NOSE, 25)));
-        map.put(EntityType.VINDICATOR, List.of(e(ModItems.ILLAGER_NOSE, 25)));
-        map.put(EntityType.EVOKER, List.of(e(ModItems.ILLAGER_NOSE, 25)));
+                e(ModItems.TOUGH_FLESH, 25), e(ModItems.ILLAGER_NOSE, 25), e(ModItems.GIANT_TOOTH, 10)));
         return Collections.unmodifiableMap(map);
     }
 

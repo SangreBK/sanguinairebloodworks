@@ -9,6 +9,7 @@ import net.minecraft.world.entity.player.Inventory;
 
 public class ResearchStationScreen extends MachineScreen<ResearchStationMenu> {
     private static final String PREFIX = "gui." + Sanguinaire.MOD_ID + ".research_station.";
+    private static final int STATUS_Y_HIGH = 24;
 
     public ResearchStationScreen(ResearchStationMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title, Sanguinaire.id("textures/gui/research_station.png"));
@@ -33,7 +34,14 @@ public class ResearchStationScreen extends MachineScreen<ResearchStationMenu> {
         Component journal = Component.translatable(PREFIX + "journal");
         graphics.drawString(font, specimen, ResearchStationMenu.INGREDIENT_X - 6 - font.width(specimen),
                 ResearchStationMenu.INGREDIENT_Y + 4, STATUS_COLOR, false);
-        graphics.drawString(font, journal, ResearchStationMenu.JOURNAL_X - 6 - font.width(journal),
+        // Right of the journal slot: on the left it would run into the "Inventory" label.
+        graphics.drawString(font, journal, ResearchStationMenu.JOURNAL_X + 16 + 6,
                 ResearchStationMenu.JOURNAL_Y + 4, STATUS_COLOR, false);
+    }
+
+    /** Status text starts higher than on the other machines, so long messages end above the "Journal" label. */
+    @Override
+    protected int statusY(int lineCount) {
+        return STATUS_Y_HIGH;
     }
 }

@@ -1,5 +1,8 @@
 package com.sanguinaire.client;
 
+import com.sanguinaire.mutation.VileCaneEvents;
+import com.sanguinaire.network.packet.ToggleCanePacket;
+
 import com.sanguinaire.Sanguinaire;
 import com.sanguinaire.mutation.MutationAbilities;
 import com.sanguinaire.mutation.MutationType;
@@ -152,6 +155,9 @@ public final class ClientTransformationEffects {
             MutationType type = TransformationManager.getActive(player);
             if (type != null && MutationAbilities.hasActiveAbility(type)) {
                 ModNetwork.sendToServer(new UseAbilityPacket());
+            } else if (type == null && !VileCaneEvents.heldCane(player).isEmpty()) {
+                // Humans use the same key to switch a Vile Cane held in the main hand.
+                ModNetwork.sendToServer(new ToggleCanePacket());
             }
         }
 

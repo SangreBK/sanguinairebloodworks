@@ -6,6 +6,7 @@ import com.sanguinaire.blood.BloodType;
 import com.sanguinaire.registry.ModItems;
 import net.minecraft.ChatFormatting;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
@@ -17,6 +18,7 @@ import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -25,8 +27,9 @@ import java.util.List;
  *     <li>{@value #TAG_TYPE}: Monster, Animal or Humanoid ({@link BloodType}).</li>
  *     <li>{@value #TAG_DONOR}: the player it was drawn from, if any. The tooltip then reads "Jorge's Blood"
  *     instead of "Humanoid Blood"; it still counts as Humanoid Blood everywhere.</li>
- *     <li>{@value #TAG_EFFECT}: a potion effect bound at a Sanguine Alembic. The sample is then an
- *     "Altered Blood Sample".</li>
+ *     <li>{@value #TAG_EFFECTS}: up to {@value #MAX_EFFECTS} potion effects bound at a Sanguine Alembic, one per
+ *     pass, never the same effect twice. The sample is then an "Altered Blood Sample". (Older samples kept a single
+ *     effect under {@value #TAG_EFFECT}; it is still read.)</li>
  * </ul>
  * The liquid is tinted by blood type through the same color handler as serums.
  */
@@ -34,6 +37,9 @@ public class BloodSampleItem extends Item {
     public static final String TAG_TYPE = "BloodType";
     public static final String TAG_DONOR = "Donor";
     public static final String TAG_EFFECT = "Effect";
+    public static final String TAG_EFFECTS = "Effects";
+    /** How many potion effects one sample can carry. */
+    public static final int MAX_EFFECTS = 3;
 
     public BloodSampleItem(Properties properties) {
         super(properties);
@@ -64,20 +70,55 @@ public class BloodSampleItem extends Item {
         return tag != null && tag.contains(TAG_DONOR, Tag.TAG_STRING) ? tag.getString(TAG_DONOR) : null;
     }
 
-    @Nullable
-    public static MobEffectInstance getEffect(ItemStack stack) {
+    /** The potion effects bound to this sample, in the order they were added (possibly none). */
+    public static List<MobEffectInstance> getEffects(ItemStack stack) {
+        List<MobEffectInstance> effects = new ArrayList<>();
         CompoundTag tag = stack.getTag();
-        return tag != null && tag.contains(TAG_EFFECT, Tag.TAG_COMPOUND) ? MobEffectInstance.load(tag.getCompound(TAG_EFFECT)) : null;
+        if (tag == null) {
+            return effects;
+        }
+        ListTag list = tag.getList(TAG_EFFECTS, Tag.TAG_COMPOUND);
+        for (int i = 0; i < list.size(); i++) {
+            MobEffectInstance effect = MobEffectInstance.load(list.getCompound(i));
+            if (effect != null) {
+                effects.add(effect);
+            }
+        }
+        if (effects.isEmpty() && tag.contains(TAG_EFFECT, Tag.TAG_COMPOUND)) {
+            MobEffectInstance legacy = MobEffectInstance.load(tag.getCompound(TAG_EFFECT));
+            if (legacy != null) {
+                effects.add(legacy);
+            }
+        }
+        return effects;
     }
 
     public static boolean isAltered(ItemStack stack) {
-        return getEffect(stack) != null;
+        return !getEffects(stack).isEmpty();
     }
 
-    /** A copy of this sample with a potion effect bound to it (Sanguine Alembic). */
+    /** Whether this sample already carries an effect of the same kind. */
+    public static boolean hasEffect(ItemStack stack, MobEffectInstance effect) {
+        for (MobEffectInstance bound : getEffects(stack)) {
+            if (bound.getEffect() == effect.getEffect()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** A copy of this sample with one more potion effect bound to it (Sanguine Alembic). */
     public static ItemStack withEffect(ItemStack stack, MobEffectInstance effect) {
         ItemStack altered = stack.copyWithCount(1);
-        altered.getOrCreateTag().put(TAG_EFFECT, new MobEffectInstance(effect).save(new CompoundTag()));
+        List<MobEffectInstance> effects = getEffects(stack);
+        effects.add(new MobEffectInstance(effect));
+        ListTag list = new ListTag();
+        for (MobEffectInstance bound : effects) {
+            list.add(bound.save(new CompoundTag()));
+        }
+        CompoundTag tag = altered.getOrCreateTag();
+        tag.remove(TAG_EFFECT);
+        tag.put(TAG_EFFECTS, list);
         return altered;
     }
 
@@ -85,7 +126,7 @@ public class BloodSampleItem extends Item {
     @Nullable
     public static BloodInfusion toInfusion(ItemStack stack) {
         BloodType type = getType(stack);
-        return type == null ? null : new BloodInfusion(type, getEffect(stack));
+        return type == null ? null : new BloodInfusion(type, getEffects(stack));
     }
 
     public static int getLiquidColor(ItemStack stack) {
@@ -109,8 +150,12 @@ public class BloodSampleItem extends Item {
         tooltip.add((donor != null
                 ? Component.translatable("tooltip." + Sanguinaire.MOD_ID + ".blood.donor", donor)
                 : type.getDisplayName().copy()).withStyle(ChatFormatting.GRAY));
-        MobEffectInstance effect = getEffect(stack);
-        if (effect != null) {
+        addEffectLines(getEffects(stack), tooltip);
+    }
+
+    /** One "Infused with ..." line per bound effect, colored like a potion tooltip. */
+    public static void addEffectLines(List<MobEffectInstance> effects, List<Component> tooltip) {
+        for (MobEffectInstance effect : effects) {
             tooltip.add(Component.translatable("tooltip." + Sanguinaire.MOD_ID + ".blood.infused", describeEffect(effect))
                     .withStyle(effect.getEffect().getCategory().getTooltipFormatting()));
         }

@@ -1,5 +1,7 @@
 package com.sanguinaire.network;
 
+import com.sanguinaire.network.packet.ToggleCanePacket;
+
 import net.minecraft.server.MinecraftServer;
 
 import com.sanguinaire.settings.SanguinaireSettings;
@@ -76,6 +78,11 @@ public final class ModNetwork {
                 .encoder(SettingsPacket::encode)
                 .decoder(SettingsPacket::decode)
                 .consumerMainThread(SettingsPacket::handle)
+                .add();
+        CHANNEL.messageBuilder(ToggleCanePacket.class, id++, NetworkDirection.PLAY_TO_SERVER)
+                .encoder(ToggleCanePacket::encode)
+                .decoder(ToggleCanePacket::decode)
+                .consumerMainThread(ToggleCanePacket::handle)
                 .add();
         CHANNEL.messageBuilder(EmptySwingPacket.class, id++, NetworkDirection.PLAY_TO_SERVER)
                 .encoder(EmptySwingPacket::encode)

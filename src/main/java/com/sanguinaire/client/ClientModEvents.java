@@ -1,5 +1,9 @@
 package com.sanguinaire.client;
 
+import com.sanguinaire.item.VileCaneItem;
+import net.minecraft.client.renderer.item.ItemProperties;
+import net.minecraft.resources.ResourceLocation;
+
 import com.sanguinaire.Sanguinaire;
 import com.sanguinaire.client.model.FadeHoundModel;
 import com.sanguinaire.client.model.GoatmanModel;
@@ -38,6 +42,9 @@ public final class ClientModEvents {
     public static void onClientSetup(FMLClientSetupEvent event) {
         event.enqueueWork(() -> {
             MenuScreens.register(ModMenuTypes.SERUM_BRIEFCASE.get(), SerumBriefcaseScreen::new);
+            // Vile Cane: 0 = cane model, 1 = sword model.
+            ItemProperties.register(ModItems.VILE_CANE.get(), new ResourceLocation(Sanguinaire.MOD_ID, "sword_mode"),
+                    (stack, level, entity, seed) -> VileCaneItem.isSwordMode(stack) ? 1.0F : 0.0F);
             MenuScreens.register(ModMenuTypes.RESEARCH_STATION.get(), ResearchStationScreen::new);
             MenuScreens.register(ModMenuTypes.SERUM_SYNTHESIZER.get(), SerumSynthesizerScreen::new);
             MenuScreens.register(ModMenuTypes.SANGUINE_ALEMBIC.get(), SanguineAlembicScreen::new);
