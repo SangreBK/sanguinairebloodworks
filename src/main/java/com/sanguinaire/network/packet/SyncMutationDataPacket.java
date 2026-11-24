@@ -18,12 +18,13 @@ import java.util.function.Supplier;
  * @param mutationId empty string when not transformed
  */
 public record SyncMutationDataPacket(int entityId, float weakenedHealth, String mutationId, int remainingTicks,
-                                     int physicalBoostTicks, boolean taintedBlood) {
+                                     int physicalBoostTicks, boolean taintedBlood, boolean creeperCharged) {
 
     public static SyncMutationDataPacket of(Player player, PlayerMutationData data) {
         MutationType active = data.getActiveMutation();
         return new SyncMutationDataPacket(player.getId(), data.getWeakenedHealth(),
-                active == null ? "" : active.getId(), data.getRemainingTicks(), data.getPhysicalBoostTicks(), data.hasTaintedBlood());
+                active == null ? "" : active.getId(), data.getRemainingTicks(), data.getPhysicalBoostTicks(), data.hasTaintedBlood(),
+                data.isCreeperCharged());
     }
 
     public void encode(FriendlyByteBuf buffer) {
@@ -33,11 +34,12 @@ public record SyncMutationDataPacket(int entityId, float weakenedHealth, String 
         buffer.writeVarInt(remainingTicks);
         buffer.writeVarInt(physicalBoostTicks);
         buffer.writeBoolean(taintedBlood);
+        buffer.writeBoolean(creeperCharged);
     }
 
     public static SyncMutationDataPacket decode(FriendlyByteBuf buffer) {
         return new SyncMutationDataPacket(buffer.readVarInt(), buffer.readFloat(), buffer.readUtf(), buffer.readVarInt(),
-                buffer.readVarInt(), buffer.readBoolean());
+                buffer.readVarInt(), buffer.readBoolean(), buffer.readBoolean());
     }
 
     public static void handle(SyncMutationDataPacket packet, Supplier<NetworkEvent.Context> context) {

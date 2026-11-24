@@ -1,5 +1,19 @@
 package com.sanguinaire.client.render;
 
+import java.lang.reflect.Field;
+
+import java.util.Map;
+
+import java.util.IdentityHashMap;
+
+import java.util.ArrayList;
+
+import net.minecraftforge.fml.util.ObfuscationReflectionHelper;
+
+import net.minecraftforge.client.event.RenderLevelStageEvent;
+
+import net.minecraft.client.renderer.entity.EntityRenderer;
+
 import com.sanguinaire.Sanguinaire;
 import com.sanguinaire.mutation.MutationType;
 import com.sanguinaire.mutation.TransformationManager;
@@ -42,6 +56,11 @@ public final class MutationVisionEffects {
     private static final int HIGHLIGHT_BLUE = 255;
     private static final int HIGHLIGHT_ALPHA = 150;
 
+    /** EntityRenderer#shadowRadius (SRG f_114477_). */
+    private static final Field SHADOW_RADIUS = ObfuscationReflectionHelper.findField(EntityRenderer.class, "f_114477_");
+    /** Renderers whose shadow is switched off right now, with their real radius. */
+    private static final Map<EntityRenderer<?>, Float> HIDDEN_SHADOWS = new IdentityHashMap<>();
+
     private static boolean renderingHighlight;
     private static boolean invertActive;
     @Nullable
@@ -75,6 +94,45 @@ public final class MutationVisionEffects {
         }
         if (!isMoving(entity)) {
             event.setCanceled(true);
+            hideShadow(event.getRenderer());
+        } else {
+            restoreShadow(event.getRenderer());
+        }
+    }
+
+    /**
+     * The entity dispatcher draws the shadow after the renderer, even when the render event was cancelled, so a
+     * still creature's shadow would give it away. Its renderer's shadow radius is zeroed while it is hidden and put
+     * back as soon as that renderer draws a visible creature, and in any case once all entities are drawn.
+     */
+    private static void hideShadow(EntityRenderer<?> renderer) {
+        try {
+            if (!HIDDEN_SHADOWS.containsKey(renderer)) {
+                HIDDEN_SHADOWS.put(renderer, SHADOW_RADIUS.getFloat(renderer));
+            }
+            SHADOW_RADIUS.setFloat(renderer, 0.0F);
+        } catch (IllegalAccessException ignored) {
+            // leave the shadow
+        }
+    }
+
+    private static void restoreShadow(EntityRenderer<?> renderer) {
+        Float radius = HIDDEN_SHADOWS.remove(renderer);
+        if (radius != null) {
+            try {
+                SHADOW_RADIUS.setFloat(renderer, radius);
+            } catch (IllegalAccessException ignored) {
+                // nothing more to do
+            }
+        }
+    }
+
+    @SubscribeEvent
+    public static void onRenderStage(RenderLevelStageEvent event) {
+        if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_ENTITIES && !HIDDEN_SHADOWS.isEmpty()) {
+            for (EntityRenderer<?> renderer : new ArrayList<>(HIDDEN_SHADOWS.keySet())) {
+                restoreShadow(renderer);
+            }
         }
     }
 

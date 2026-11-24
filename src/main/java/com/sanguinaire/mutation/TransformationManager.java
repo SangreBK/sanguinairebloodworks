@@ -1,5 +1,17 @@
 package com.sanguinaire.mutation;
 
+import com.sanguinaire.Sanguinaire;
+
+import net.minecraft.world.entity.Entity;
+
+import net.minecraft.nbt.CompoundTag;
+
+import net.minecraft.nbt.NbtUtils;
+
+import net.minecraft.nbt.Tag;
+
+import net.minecraft.nbt.ListTag;
+
 import net.minecraft.world.entity.player.Inventory;
 
 import com.sanguinaire.settings.SanguinaireSettings;
@@ -553,10 +565,38 @@ public final class TransformationManager {
 
     // ---- Targeting ---------------------------------------------------------------------------------------------
 
+    /** Mob persistent-data key: UUIDs of players who attacked it while it treated them as an ally. */
+    private static final String TAG_BETRAYED_BY = Sanguinaire.MOD_ID + ":betrayed_by";
+
+    /** Whether {@code player} once attacked {@code mob} while it treated them as one of its own (permanent). */
+    public static boolean hasBetrayed(Entity mob, Player player) {
+        ListTag list = mob.getPersistentData().getList(TAG_BETRAYED_BY, Tag.TAG_INT_ARRAY);
+        for (int i = 0; i < list.size(); i++) {
+            if (NbtUtils.loadUUID(list.get(i)).equals(player.getUUID())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * A transformed player attacked a creature of its own faction: that creature never treats this player as an ally
+     * again, in any form. Saved with the mob.
+     */
+    public static void markBetrayed(Mob mob, Player player) {
+        if (hasBetrayed(mob, player)) {
+            return;
+        }
+        CompoundTag data = mob.getPersistentData();
+        ListTag list = data.getList(TAG_BETRAYED_BY, Tag.TAG_INT_ARRAY);
+        list.add(NbtUtils.createUUID(player.getUUID()));
+        data.put(TAG_BETRAYED_BY, list);
+    }
+
     /** Whether {@code mob} must not target {@code player} because of the player's transformation. */
     public static boolean ignoresPlayer(Mob mob, Player player) {
         MutationType type = getActive(player);
-        if (type == null) {
+        if (type == null || hasBetrayed(mob, player)) {
             return false;
         }
         if (type.hasTrait(MutationTrait.COUNTS_AS_MONSTER) && mob instanceof Enemy) {
@@ -685,6 +725,9 @@ public final class TransformationManager {
     private static void calmWardens(ServerPlayer player) {
         for (Warden warden : player.level().getEntitiesOfClass(Warden.class,
                 player.getBoundingBox().inflate(WARDEN_CALM_RADIUS))) {
+            if (hasBetrayed(warden, player)) {
+                continue; // it remembers being attacked
+            }
             warden.clearAnger(player);
             if (warden.getBrain().getMemory(MemoryModuleType.ROAR_TARGET).orElse(null) == player) {
                 warden.getBrain().eraseMemory(MemoryModuleType.ROAR_TARGET);

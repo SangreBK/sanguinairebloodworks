@@ -1,5 +1,22 @@
 package com.sanguinaire.client.render;
 
+import java.lang.reflect.Modifier;
+
+import java.lang.reflect.Field;
+
+import com.sanguinaire.player.PlayerMutationProvider;
+
+import com.sanguinaire.player.PlayerMutationData;
+
+
+import net.minecraft.network.syncher.EntityDataSerializers;
+
+import net.minecraft.network.syncher.EntityDataAccessor;
+
+import net.minecraft.world.entity.monster.Creeper;
+
+import net.minecraft.world.entity.animal.Wolf;
+
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
@@ -100,6 +117,12 @@ public final class TransformationRenderer {
     }
 
     private static final Map<Integer, Animation> ANIMATIONS = new HashMap<>();
+    /** Player id → client game time until which a Wolf player looks angry. */
+    private static final Map<Integer, Long> WOLF_RAGE_UNTIL = new HashMap<>();
+    /** Creeper's private "powered" data accessor, for the charged look (found once by reflection). */
+    @Nullable
+    private static EntityDataAccessor<Boolean> creeperPowered;
+    private static boolean creeperPoweredLookedUp;
     /** Player id → client game time a Fade Hound split started. */
     private static final Map<Integer, Long> FADE_SPLITS = new HashMap<>();
     private static final int FADE_SPLIT_COPIES = 4;
@@ -129,6 +152,10 @@ public final class TransformationRenderer {
         }
         if (kind == MutationAbilities.ANIMATION_FADEHOUND_SPLIT) {
             FADE_SPLITS.put(playerId, gameTime);
+            return;
+        }
+        if (kind == MutationAbilities.ANIMATION_WOLF_RAGE) {
+            WOLF_RAGE_UNTIL.put(playerId, gameTime + durationTicks);
             return;
         }
         ANIMATIONS.put(playerId, new Animation(kind, gameTime, durationTicks));
@@ -275,6 +302,48 @@ public final class TransformationRenderer {
         if (animation != null && !active) {
             ANIMATIONS.remove(player.getId());
         }
+        if (puppet instanceof Wolf wolf) {
+            Long until = WOLF_RAGE_UNTIL.get(player.getId());
+            boolean raging = until != null && gameTime < until;
+            if (!raging) {
+                WOLF_RAGE_UNTIL.remove(player.getId());
+            }
+            wolf.setRemainingPersistentAngerTime(raging ? 100 : 0); // angry texture and snarl
+        } else if (puppet instanceof Creeper creeper) {
+            EntityDataAccessor<Boolean> powered = creeperPoweredAccessor();
+            boolean charged = PlayerMutationProvider.get(player).map(PlayerMutationData::isCreeperCharged).orElse(false);
+            if (powered != null && creeper.isPowered() != charged) {
+                creeper.getEntityData().set(powered, charged); // the vanilla charged-creeper aura layer
+            }
+        }
+    }
+
+    @Nullable
+    @SuppressWarnings("unchecked")
+    private static EntityDataAccessor<Boolean> creeperPoweredAccessor() {
+        if (creeperPoweredLookedUp) {
+            return creeperPowered;
+        }
+        creeperPoweredLookedUp = true;
+        {
+            // DATA_IS_POWERED is the first Boolean accessor Creeper declares (DATA_SWELL_DIR, DATA_IS_POWERED,
+            // DATA_IS_IGNITED), which holds under any mappings.
+            for (Field field : Creeper.class.getDeclaredFields()) {
+                if (Modifier.isStatic(field.getModifiers()) && field.getType() == EntityDataAccessor.class) {
+                    try {
+                        field.setAccessible(true);
+                        EntityDataAccessor<?> accessor = (EntityDataAccessor<?>) field.get(null);
+                        if (accessor.getSerializer() == EntityDataSerializers.BOOLEAN) {
+                            creeperPowered = (EntityDataAccessor<Boolean>) accessor;
+                            break;
+                        }
+                    } catch (IllegalAccessException ignored) {
+                        // keep looking
+                    }
+                }
+            }
+        }
+        return creeperPowered;
     }
 
     private static void renderCustomCreature(Player player, MutationType type, PoseStack poseStack, MultiBufferSource buffers,

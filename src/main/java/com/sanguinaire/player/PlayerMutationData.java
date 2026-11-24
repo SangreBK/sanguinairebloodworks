@@ -45,6 +45,7 @@ public class PlayerMutationData {
     private static final String TAG_BOOST = "PhysicalBoostTicks";
     private static final String TAG_UNLOCKED_SERUMS = "UnlockedSerums";
     private static final String TAG_BLOOD = "ActiveBlood";
+    private static final String TAG_CHARGED = "CreeperCharged";
 
     private float weakenedHealth;
     @Nullable
@@ -61,6 +62,8 @@ public class PlayerMutationData {
     /** Blood mixed into the active transformation's serum, if any. */
     @Nullable
     private BloodInfusion activeBlood;
+    /** Creeper form struck by lightning: a charged creeper until the transformation ends. */
+    private boolean creeperCharged;
 
     public float getWeakenedHealth() {
         return weakenedHealth;
@@ -80,7 +83,18 @@ public class PlayerMutationData {
     }
 
     public void setActiveMutation(@Nullable MutationType activeMutation) {
+        if (this.activeMutation != activeMutation) {
+            creeperCharged = false; // the charge belongs to one transformation
+        }
         this.activeMutation = activeMutation;
+    }
+
+    public boolean isCreeperCharged() {
+        return creeperCharged;
+    }
+
+    public void setCreeperCharged(boolean charged) {
+        this.creeperCharged = charged;
     }
 
     public boolean isTransformed() {
@@ -211,7 +225,9 @@ public class PlayerMutationData {
             this.healthBeforeTransformation = other.healthBeforeTransformation;
             this.transformedHealth = other.transformedHealth;
             this.activeBlood = other.activeBlood;
+            this.creeperCharged = other.creeperCharged;
         } else {
+            this.creeperCharged = false;
             this.activeMutation = null;
             this.remainingTicks = 0;
             this.activeBlood = null;
@@ -244,6 +260,7 @@ public class PlayerMutationData {
             if (activeBlood != null) {
                 tag.put(TAG_BLOOD, activeBlood.save());
             }
+            tag.putBoolean(TAG_CHARGED, creeperCharged);
         }
         return tag;
     }
@@ -276,5 +293,6 @@ public class PlayerMutationData {
         transformedHealth = tag.getFloat(TAG_TRANSFORMED_HEALTH);
         activeBlood = activeMutation != null && tag.contains(TAG_BLOOD, Tag.TAG_COMPOUND)
                 ? BloodInfusion.load(tag.getCompound(TAG_BLOOD)) : null;
+        creeperCharged = activeMutation != null && tag.getBoolean(TAG_CHARGED);
     }
 }

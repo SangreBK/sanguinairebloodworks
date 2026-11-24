@@ -65,6 +65,7 @@ public final class ClientPacketHandler {
             data.setRemainingTicks(type == null ? 0 : packet.remainingTicks());
             data.setPhysicalBoostTicks(packet.physicalBoostTicks());
             data.setTaintedBlood(packet.taintedBlood());
+            data.setCreeperCharged(packet.creeperCharged());
             if (changed) {
                 player.refreshDimensions(); // hitbox follows the transformation on the client too
             }

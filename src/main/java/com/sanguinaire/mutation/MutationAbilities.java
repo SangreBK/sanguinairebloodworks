@@ -1,5 +1,15 @@
 package com.sanguinaire.mutation;
 
+import java.util.Set;
+
+import java.util.HashSet;
+
+import net.minecraft.sounds.SoundEvent;
+
+import net.minecraft.world.entity.EntityType;
+
+import net.minecraft.world.effect.MobEffect;
+
 import org.joml.Vector3f;
 
 import net.minecraft.core.particles.DustParticleOptions;
@@ -72,6 +82,11 @@ import java.util.UUID;
  *     <li>Goatman roar: 20 s</li>
  *     <li>Rotting Abomination bile: 10 s</li>
  *     <li>Fade Hound shadow dash: 4 s (only after a successful dash)</li>
+ *     <li>Spider / Cave Spider stealth: 8 s</li>
+ *     <li>Zombie / Husk / Drowned call of the horde: 30 s</li>
+ *     <li>Phantom swoop: 4 s (only while flying)</li>
+ *     <li>Goat ram: 8 s</li>
+ *     <li>Wolf rage: 8 s</li>
  * </ul>
  * Creeper and Villager abilities have no cooldown; all requests also pass a short anti-spam guard.
  *
@@ -93,6 +108,28 @@ public final class MutationAbilities {
     private static final String COOLDOWN_VOMIT = "vomit";
     private static final String COOLDOWN_DASH = "dash";
     private static final String COOLDOWN_RAVAGER_ROAR = "ravager_roar";
+    private static final String COOLDOWN_SPIDER_STEALTH = "spider_stealth";
+    private static final String COOLDOWN_HORDE = "horde";
+    private static final String COOLDOWN_SWOOP = "phantom_swoop";
+    private static final String COOLDOWN_RAM = "goat_ram";
+    private static final String COOLDOWN_WOLF_RAGE = "wolf_rage";
+    private static final int SPIDER_STEALTH_TICKS = 8 * 20;
+    private static final int SPIDER_STEALTH_COOLDOWN_TICKS = 8 * 20;
+    private static final int HORDE_COOLDOWN_TICKS = 30 * 20;
+    private static final double HORDE_RADIUS = 20.0D;
+    /** Followers further away than this lose track of the player. */
+    private static final double HORDE_LEASH = 48.0D;
+    private static final int SWOOP_COOLDOWN_TICKS = 4 * 20;
+    private static final int RAM_COOLDOWN_TICKS = 8 * 20;
+    private static final int WOLF_RAGE_TICKS = 8 * 20;
+    private static final int WOLF_RAGE_COOLDOWN_TICKS = 8 * 20;
+    /** Dashes push the player every tick for a few ticks: speed x ticks = distance. */
+    private static final int DASH_PUSH_TICKS = 4;
+    private static final double SWOOP_SPEED = 6.0D / DASH_PUSH_TICKS;
+    private static final double RAM_SPEED = 5.0D / DASH_PUSH_TICKS;
+    private static final float DASH_HIT_DAMAGE = 2.0F;
+    /** Charged creeper blast: vanilla doubles the radius of a charged creeper. */
+    private static final float CHARGED_CREEPER_EXPLOSION_RADIUS = 6.0F;
     private static final int RAVAGER_ROAR_COOLDOWN_TICKS = 15 * 20;
     private static final double RAVAGER_ROAR_RADIUS = 5.0D;
     /** Vanilla's Ravager roar pushes with 4.0, divided by the squared distance (nearer is thrown harder). */
@@ -138,6 +175,8 @@ public final class MutationAbilities {
     /** Ravager roar: the puppet's mouth opens wide (Ravager#getRoarTick). */
     public static final int ANIMATION_RAVAGER_ROAR = 7;
     public static final int RAVAGER_ROAR_ANIMATION_TICKS = 20;
+    /** Wolf rage: the puppet shows the angry wolf texture for the duration. */
+    public static final int ANIMATION_WOLF_RAGE = 8;
     /** How long the split lasts; the hound cannot be hurt for this long. */
     public static final int FADE_SPLIT_TICKS = 20;
     /** Dash trail: violet dust every quarter block along three streaks. */
@@ -160,6 +199,26 @@ public final class MutationAbilities {
     private static final Map<UUID, Long> FADE_SPLIT_UNTIL = new HashMap<>();
     /** Last time a Ravager's miss played its bite sound (anti-spam). */
     private static final Map<UUID, Long> LAST_EMPTY_SWING = new HashMap<>();
+    /** Overworld game time until which a Wolf deals +1 damage. */
+    private static final Map<UUID, Long> WOLF_RAGE_UNTIL = new HashMap<>();
+    /** Mobs following a Zombie/Husk/Drowned player after its call. */
+    private static final Map<UUID, Set<UUID>> HORDES = new HashMap<>();
+
+    /** A short forced dash (Phantom swoop, Goat ram); everything it passes through is hit once. */
+    private static final class Dash {
+        final MutationType type;
+        final Vec3 velocity;
+        int ticksLeft;
+        final Set<Integer> hit = new HashSet<>();
+
+        Dash(MutationType type, Vec3 velocity, int ticks) {
+            this.type = type;
+            this.velocity = velocity;
+            this.ticksLeft = ticks;
+        }
+    }
+
+    private static final Map<UUID, Dash> DASHES = new HashMap<>();
     private static final int EMPTY_SWING_MIN_TICKS = 8;
 
     private record LaserCharge(int targetId, int totalTicks, int ticksLeft) {
@@ -201,6 +260,11 @@ public final class MutationAbilities {
             case ROTTING_ABOMINATION -> vomit(player);
             case FADEHOUND -> shadowDash(player);
             case RAVAGER -> ravagerRoar(player);
+            case SPIDER, VENOMOUS_SPIDER -> spiderStealth(player);
+            case ZOMBIE, HUSK, DROWNED -> callHorde(player, type);
+            case PHANTOM -> swoop(player);
+            case GOAT -> ram(player);
+            case WOLF -> wolfRage(player);
             default -> {
                 // This transformation has no active ability.
             }
@@ -210,7 +274,8 @@ public final class MutationAbilities {
     public static boolean hasActiveAbility(MutationType type) {
         return switch (type) {
             case CREEPER, WARDEN, ENDERMAN, GHAST, GUARDIAN, ELDER_GUARDIAN, VILLAGER,
-                 GOATMAN, ROTTING_ABOMINATION, FADEHOUND, RAVAGER -> true;
+                 GOATMAN, ROTTING_ABOMINATION, FADEHOUND, RAVAGER, SPIDER, VENOMOUS_SPIDER, ZOMBIE, HUSK, DROWNED,
+                 PHANTOM, GOAT, WOLF -> true;
             default -> false;
         };
     }
@@ -219,6 +284,10 @@ public final class MutationAbilities {
     public static void tick(ServerPlayer player) {
         tickWindup(player);
         tickDashInvulnerability(player);
+        tickDash(player);
+        if (player.tickCount % 10 == 0) {
+            tickHorde(player);
+        }
         LaserCharge charge = LASER_CHARGES.get(player.getUUID());
         if (charge == null) {
             return;
@@ -269,6 +338,9 @@ public final class MutationAbilities {
         DASH_INVULNERABLE_UNTIL.remove(player.getUUID());
         FADE_SPLIT_UNTIL.remove(player.getUUID());
         LAST_EMPTY_SWING.remove(player.getUUID());
+        WOLF_RAGE_UNTIL.remove(player.getUUID());
+        HORDES.remove(player.getUUID());
+        DASHES.remove(player.getUUID());
     }
 
     // ---- Cooldowns -------------------------------------------------------------------------------------------
@@ -303,7 +375,10 @@ public final class MutationAbilities {
     private static void explode(ServerPlayer player) {
         Level level = player.level();
         // The exploding entity is excluded from its own explosion; mobGriefing is respected (MOB interaction).
-        level.explode(player, player.getX(), player.getY(), player.getZ(), CREEPER_EXPLOSION_RADIUS, Level.ExplosionInteraction.MOB);
+        // Struck by lightning earlier in this transformation: a charged creeper's blast is twice as wide.
+        boolean charged = PlayerMutationProvider.get(player).map(PlayerMutationData::isCreeperCharged).orElse(false);
+        float radius = charged ? CHARGED_CREEPER_EXPLOSION_RADIUS : CREEPER_EXPLOSION_RADIUS;
+        level.explode(player, player.getX(), player.getY(), player.getZ(), radius, Level.ExplosionInteraction.MOB);
         ModAdvancements.grant(player, ModAdvancements.AW_MAN);
         TransformationManager.end(player);
     }
@@ -638,6 +713,169 @@ public final class MutationAbilities {
         LAST_EMPTY_SWING.put(player.getUUID(), now);
         Vec3 mouth = player.getEyePosition().add(player.getLookAngle().scale(1.5D));
         player.level().playSound(null, mouth.x, mouth.y, mouth.z, SoundEvents.RAVAGER_ATTACK, SoundSource.PLAYERS, 1.0F, 1.0F);
+    }
+
+    // ---- Spider / Cave Spider ----------------------------------------------------------------------------------
+
+    /** Vanishes for 8 seconds and gains one of Strength I, Speed I or Regeneration I for as long. */
+    private static void spiderStealth(ServerPlayer player) {
+        if (!checkCooldown(player, COOLDOWN_SPIDER_STEALTH) || !(player.level() instanceof ServerLevel level)) {
+            return;
+        }
+        player.addEffect(new MobEffectInstance(MobEffects.INVISIBILITY, SPIDER_STEALTH_TICKS, 0, false, false, true));
+        MobEffect[] boons = {MobEffects.DAMAGE_BOOST, MobEffects.MOVEMENT_SPEED, MobEffects.REGENERATION};
+        player.addEffect(new MobEffectInstance(boons[player.getRandom().nextInt(boons.length)], SPIDER_STEALTH_TICKS, 0));
+        level.sendParticles(ParticleTypes.LARGE_SMOKE, player.getX(), player.getY(0.4D), player.getZ(), 16, 0.4D, 0.25D, 0.4D, 0.02D);
+        level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.SPIDER_AMBIENT, SoundSource.PLAYERS, 1.0F, 0.7F);
+        startCooldown(player, COOLDOWN_SPIDER_STEALTH, SPIDER_STEALTH_COOLDOWN_TICKS);
+    }
+
+    // ---- Zombie / Husk / Drowned ------------------------------------------------------------------------------
+
+    /**
+     * Groans the creature's idle call: every creature of exactly the same kind within 20 blocks (that hasn't been
+     * betrayed) follows the player until the transformation ends, still fighting anything it would fight.
+     */
+    private static void callHorde(ServerPlayer player, MutationType type) {
+        if (!checkCooldown(player, COOLDOWN_HORDE) || !(player.level() instanceof ServerLevel level)) {
+            return;
+        }
+        EntityType<?> kind = switch (type) {
+            case HUSK -> EntityType.HUSK;
+            case DROWNED -> EntityType.DROWNED;
+            default -> EntityType.ZOMBIE;
+        };
+        SoundEvent call = switch (type) {
+            case HUSK -> SoundEvents.HUSK_AMBIENT;
+            case DROWNED -> player.isInWater() ? SoundEvents.DROWNED_AMBIENT_WATER : SoundEvents.DROWNED_AMBIENT;
+            default -> SoundEvents.ZOMBIE_AMBIENT;
+        };
+        level.playSound(null, player.getX(), player.getY(), player.getZ(), call, SoundSource.PLAYERS, 2.5F, 0.8F);
+        Set<UUID> followers = HORDES.computeIfAbsent(player.getUUID(), id -> new HashSet<>());
+        for (Mob mob : level.getEntitiesOfClass(Mob.class, player.getBoundingBox().inflate(HORDE_RADIUS),
+                mob -> mob.getType() == kind && mob.isAlive() && mob.distanceToSqr(player) <= HORDE_RADIUS * HORDE_RADIUS
+                        && !TransformationManager.hasBetrayed(mob, player))) {
+            followers.add(mob.getUUID());
+            level.sendParticles(ParticleTypes.SMOKE, mob.getX(), mob.getEyeY() + 0.3D, mob.getZ(), 5, 0.2D, 0.1D, 0.2D, 0.01D);
+        }
+        startCooldown(player, COOLDOWN_HORDE, HORDE_COOLDOWN_TICKS);
+    }
+
+    /** Followers walk back to the player whenever they have nothing to fight. Every 10 ticks. */
+    private static void tickHorde(ServerPlayer player) {
+        Set<UUID> followers = HORDES.get(player.getUUID());
+        if (followers == null || !(player.level() instanceof ServerLevel level)) {
+            return;
+        }
+        followers.removeIf(id -> {
+            Entity entity = level.getEntity(id);
+            if (!(entity instanceof Mob mob) || !mob.isAlive() || TransformationManager.hasBetrayed(mob, player)
+                    || mob.distanceToSqr(player) > HORDE_LEASH * HORDE_LEASH) {
+                return true;
+            }
+            if (mob.getTarget() == null && mob.distanceToSqr(player) > 9.0D) {
+                mob.getNavigation().moveTo(player, 1.1D);
+            }
+            return false;
+        });
+        if (followers.isEmpty()) {
+            HORDES.remove(player.getUUID());
+        }
+    }
+
+    // ---- Phantom / Goat dashes ---------------------------------------------------------------------------------
+
+    /** Phantom: shrieks and swoops 6 blocks along the look direction; only while flying. */
+    private static void swoop(ServerPlayer player) {
+        if (!player.getAbilities().flying) {
+            player.displayClientMessage(Component.translatable("message." + Sanguinaire.MOD_ID + ".swoop_needs_flight"), true);
+            return;
+        }
+        if (DASHES.containsKey(player.getUUID()) || !checkCooldown(player, COOLDOWN_SWOOP)) {
+            return;
+        }
+        DASHES.put(player.getUUID(), new Dash(MutationType.PHANTOM, player.getLookAngle().scale(SWOOP_SPEED), DASH_PUSH_TICKS));
+        player.level().playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.PHANTOM_SWOOP, SoundSource.PLAYERS, 1.5F, 1.0F);
+        startCooldown(player, COOLDOWN_SWOOP, SWOOP_COOLDOWN_TICKS);
+    }
+
+    /** Goat: lowers its horns and charges 5 blocks straight ahead. */
+    private static void ram(ServerPlayer player) {
+        if (DASHES.containsKey(player.getUUID()) || !checkCooldown(player, COOLDOWN_RAM)) {
+            return;
+        }
+        Vec3 look = player.getLookAngle();
+        Vec3 flat = new Vec3(look.x, 0.0D, look.z);
+        Vec3 forward = flat.lengthSqr() < 1.0E-4D ? Vec3.directionFromRotation(0.0F, player.getYRot()) : flat.normalize();
+        DASHES.put(player.getUUID(), new Dash(MutationType.GOAT, forward.scale(RAM_SPEED), DASH_PUSH_TICKS));
+        player.level().playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.GOAT_PREPARE_RAM, SoundSource.PLAYERS, 1.2F, 1.0F);
+        startCooldown(player, COOLDOWN_RAM, RAM_COOLDOWN_TICKS);
+    }
+
+    /**
+     * Pushes the dashing player for a few ticks (the motion is sent to the client, which does the actual moving and
+     * the wall collisions) and hits everything in the swept path once for {@link #DASH_HIT_DAMAGE}.
+     */
+    private static void tickDash(ServerPlayer player) {
+        Dash dash = DASHES.get(player.getUUID());
+        if (dash == null) {
+            return;
+        }
+        if (TransformationManager.getActive(player) != dash.type || !player.isAlive()) {
+            DASHES.remove(player.getUUID());
+            return;
+        }
+        Level level = player.level();
+        AABB path = player.getBoundingBox().inflate(0.3D).expandTowards(dash.velocity);
+        for (LivingEntity target : level.getEntitiesOfClass(LivingEntity.class, path, entity -> canDashHit(player, entity))) {
+            if (dash.hit.add(target.getId())) {
+                target.hurt(player.damageSources().playerAttack(player), DASH_HIT_DAMAGE);
+                if (dash.type == MutationType.GOAT) {
+                    level.playSound(null, target.getX(), target.getY(), target.getZ(), SoundEvents.GOAT_RAM_IMPACT, SoundSource.PLAYERS, 1.0F, 1.0F);
+                }
+            }
+        }
+        if (dash.ticksLeft > 0) {
+            dash.ticksLeft--;
+            player.setDeltaMovement(dash.velocity);
+        } else {
+            DASHES.remove(player.getUUID());
+            player.setDeltaMovement(dash.velocity.scale(0.2D));
+        }
+        player.hurtMarked = true; // sends the new motion to the client
+        player.resetFallDistance();
+    }
+
+    private static boolean canDashHit(ServerPlayer player, LivingEntity entity) {
+        if (entity == player || !entity.isAlive() || entity.isSpectator() || player.isAlliedTo(entity)) {
+            return false;
+        }
+        if (entity instanceof ArmorStand stand && stand.isMarker()) {
+            return false;
+        }
+        return !(entity instanceof TamableAnimal pet && player.getUUID().equals(pet.getOwnerUUID()));
+    }
+
+    // ---- Wolf --------------------------------------------------------------------------------------------------
+
+    /** Bares its teeth: angry-wolf look and +1 damage on every hit for 8 seconds. */
+    private static void wolfRage(ServerPlayer player) {
+        if (!checkCooldown(player, COOLDOWN_WOLF_RAGE)) {
+            return;
+        }
+        WOLF_RAGE_UNTIL.put(player.getUUID(), now(player) + WOLF_RAGE_TICKS);
+        player.level().playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.WOLF_GROWL, SoundSource.PLAYERS, 1.3F, 0.9F);
+        ModNetwork.playAbilityAnimation(player, ANIMATION_WOLF_RAGE, WOLF_RAGE_TICKS);
+        startCooldown(player, COOLDOWN_WOLF_RAGE, WOLF_RAGE_COOLDOWN_TICKS);
+    }
+
+    /** True while a Wolf's rage is active. Server only. */
+    public static boolean isWolfRaging(Player player) {
+        if (!(player instanceof ServerPlayer serverPlayer) || TransformationManager.getActive(player) != MutationType.WOLF) {
+            return false;
+        }
+        Long until = WOLF_RAGE_UNTIL.get(player.getUUID());
+        return until != null && now(serverPlayer) < until;
     }
 
     /** True while a Fade Hound is still untouchable after its dash. Server only. */

@@ -1,5 +1,11 @@
 package com.sanguinaire.mutation;
 
+import com.sanguinaire.network.ModNetwork;
+
+import com.sanguinaire.player.PlayerMutationProvider;
+
+import net.minecraftforge.event.entity.EntityStruckByLightningEvent;
+
 import net.minecraftforge.event.entity.EntityMountEvent;
 
 import net.minecraftforge.event.entity.living.LivingKnockBackEvent;
@@ -252,6 +258,9 @@ public final class TransformationEvents {
         if (TransformationManager.hasTrait(attacker, MutationTrait.POISON_ON_HIT)) {
             target.addEffect(new MobEffectInstance(MobEffects.POISON, POISON_ON_HIT_TICKS, 0), attacker);
         }
+        if (MutationAbilities.isWolfRaging(attacker)) {
+            event.setAmount(event.getAmount() + 1.0F); // Wolf rage: +1 damage per hit
+        }
         if (TransformationManager.hasTrait(attacker, MutationTrait.ARMOR_PIERCING) && !source.is(DamageTypeTags.BYPASSES_ARMOR)) {
             event.setAmount(compensateForArmor(target, event.getAmount()));
         }
@@ -441,6 +450,39 @@ public final class TransformationEvents {
             player.level().playSound(null, target.getX(), target.getY(), target.getZ(), SoundEvents.RAVAGER_ATTACK,
                     SoundSource.PLAYERS, 1.0F, 1.0F);
         }
+    }
+
+    /**
+     * Hurting a creature that treats you as one of its own (a zombie while you are a zombie, a raider while you are a
+     * Ravager, a golem while you are a villager...) turns that creature against you for good. Any damage you cause
+     * counts: melee, abilities, projectiles.
+     */
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    public static void onBetrayal(LivingHurtEvent event) {
+        if (event.getEntity() instanceof Mob mob && !mob.level().isClientSide()
+                && event.getSource().getEntity() instanceof ServerPlayer player
+                && TransformationManager.ignoresPlayer(mob, player)) {
+            TransformationManager.markBetrayed(mob, player);
+            mob.setTarget(player);
+        }
+    }
+
+    /**
+     * Creeper form: lightning doesn't hurt, it charges you instead (the charged look, and a blast twice as wide)
+     * until the transformation ends.
+     */
+    @SubscribeEvent
+    public static void onLightning(EntityStruckByLightningEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer player) || TransformationManager.getActive(player) != MutationType.CREEPER) {
+            return;
+        }
+        event.setCanceled(true);
+        PlayerMutationProvider.get(player).ifPresent(data -> {
+            if (!data.isCreeperCharged()) {
+                data.setCreeperCharged(true);
+                ModNetwork.syncMutationData(player);
+            }
+        });
     }
 
     /** Transformed players can't ride anything (boats, horses, minecarts, pigs...). */
