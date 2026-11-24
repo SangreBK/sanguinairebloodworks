@@ -141,7 +141,12 @@ public final class MutationAbilities {
     private static final double ROAR_RADIUS = 8.0D;
     private static final int ROAR_STUN_TICKS = 20;             // Slowness VI for 1 s
     private static final int ROAR_WEAKNESS_TICKS = 5 * 20;     // Weakness II for 5 s
-    private static final double VOMIT_RANGE = 7.0D;
+    private static final double VOMIT_RANGE = 8.0D;
+    /** The spray's half-width at the mouth and how much it widens per block (sized for the 2-block-wide model). */
+    private static final double VOMIT_BASE_WIDTH = 1.1D;
+    private static final double VOMIT_SPREAD = 0.25D;
+    /** Push along the spray (vanilla knockback strength; a Knockback II sword is about 1.4). */
+    private static final float VOMIT_PUSH = 1.3F;
     private static final float VOMIT_DAMAGE = 10.0F;
     private static final int VOMIT_POISON_TICKS = 10 * 20;     // Poison I for 10 s
     private static final double DASH_RANGE = 16.0D;
@@ -190,7 +195,7 @@ public final class MutationAbilities {
     /** Hostile mobs one roar must stun for "Silence of the Lambs". */
     private static final int ROAR_ADVANCEMENT_ENEMIES = 8;
     public static final int ROAR_EFFECT_TICKS = 20;
-    public static final int VOMIT_EFFECT_TICKS = 10;
+    public static final int VOMIT_EFFECT_TICKS = 16;
     public static final int DASH_EFFECT_TICKS = 10;
 
     /** Overworld game time until which a Fade Hound is untouchable after its dash. */
@@ -613,7 +618,7 @@ public final class MutationAbilities {
         }
         Vec3 eye = player.getEyePosition();
         Vec3 look = player.getLookAngle();
-        AABB area = player.getBoundingBox().expandTowards(look.scale(VOMIT_RANGE)).inflate(1.5D);
+        AABB area = player.getBoundingBox().expandTowards(look.scale(VOMIT_RANGE)).inflate(VOMIT_BASE_WIDTH + VOMIT_RANGE * VOMIT_SPREAD);
         for (LivingEntity target : level.getEntitiesOfClass(LivingEntity.class, area,
                 entity -> entity != player && entity.isAlive() && !entity.isSpectator())) {
             Vec3 toTarget = target.getBoundingBox().getCenter().subtract(eye);
@@ -623,11 +628,14 @@ public final class MutationAbilities {
             }
             // A spray that widens with distance.
             double offAxis = toTarget.subtract(look.scale(along)).length();
-            if (offAxis > 0.6D + target.getBbWidth() * 0.5D + along * 0.15D || !player.hasLineOfSight(target)) {
+            if (offAxis > VOMIT_BASE_WIDTH + target.getBbWidth() * 0.5D + along * VOMIT_SPREAD || !player.hasLineOfSight(target)) {
                 continue;
             }
             target.hurt(level.damageSources().indirectMagic(player, player), VOMIT_DAMAGE);
             target.addEffect(new MobEffectInstance(MobEffects.POISON, VOMIT_POISON_TICKS, 0), player);
+            // The force of the gush shoves it away along the spray.
+            target.knockback(VOMIT_PUSH, -look.x, -look.z);
+            target.hurtMarked = true;
             level.sendParticles(new ItemParticleOption(ParticleTypes.ITEM, new ItemStack(Items.SLIME_BALL)),
                     target.getX(), target.getY(0.6D), target.getZ(), 14, 0.3D, 0.3D, 0.3D, 0.08D);
         }
@@ -702,6 +710,10 @@ public final class MutationAbilities {
      * once every few ticks.
      */
     public static void onEmptySwing(ServerPlayer player) {
+        if (TransformationManager.getActive(player) == MutationType.ROTTING_ABOMINATION) {
+            GoatmanAttacks.queueSlam(player); // the slam needs no target
+            return;
+        }
         if (TransformationManager.getActive(player) != MutationType.RAVAGER) {
             return;
         }

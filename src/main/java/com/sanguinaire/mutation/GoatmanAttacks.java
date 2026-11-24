@@ -1,5 +1,25 @@
 package com.sanguinaire.mutation;
 
+import net.minecraft.sounds.SoundEvents;
+
+import net.minecraft.world.entity.TamableAnimal;
+
+import net.minecraft.world.entity.ai.attributes.Attributes;
+
+import net.minecraft.world.level.block.state.BlockState;
+
+import net.minecraft.world.phys.Vec3;
+
+import net.minecraft.world.phys.HitResult;
+
+import net.minecraft.world.phys.BlockHitResult;
+
+import net.minecraft.world.level.ClipContext;
+
+import net.minecraft.core.particles.BlockParticleOption;
+
+import net.minecraft.core.BlockPos;
+
 import com.sanguinaire.Sanguinaire;
 import com.sanguinaire.registry.ModSounds;
 import net.minecraft.core.particles.ParticleTypes;
@@ -67,6 +87,11 @@ public final class GoatmanAttacks {
     private static final double SWEEP_MAX_DISTANCE = 4.5D;
     private static final float SWEEP_KNOCKBACK = 0.5F;
 
+    /** Radius of the Abomination's slam around the point of impact. */
+    private static final double SLAM_RADIUS = 2.5D;
+    /** No target: the slam lands where the player aims, up to its reach. */
+    private static final int NO_TARGET = -1;
+
     private record PendingHit(int targetId, int hitAt) {
     }
 
@@ -98,6 +123,23 @@ public final class GoatmanAttacks {
         PENDING.put(player.getUUID(), new PendingHit(event.getTarget().getId(), now + hitDelayTicks(type)));
     }
 
+    /**
+     * The Abomination swung at the air or the ground (reported by the client): its slam still lands, at the point it
+     * aims at, after the same wind-up and with the same cooldown as an attack on an entity.
+     */
+    public static void queueSlam(ServerPlayer player) {
+        MinecraftServer server = player.getServer();
+        if (server == null || TransformationManager.getActive(player) != MutationType.ROTTING_ABOMINATION) {
+            return;
+        }
+        int now = server.getTickCount();
+        if (now < READY_AT.getOrDefault(player.getUUID(), 0) || PENDING.containsKey(player.getUUID())) {
+            return;
+        }
+        READY_AT.put(player.getUUID(), now + ABOMINATION_ATTACK_ANIMATION_TICKS - SERVER_COOLDOWN_SLACK_TICKS);
+        PENDING.put(player.getUUID(), new PendingHit(NO_TARGET, now + ABOMINATION_HIT_DELAY_TICKS));
+    }
+
     @SubscribeEvent
     public static void onServerTick(TickEvent.ServerTickEvent event) {
         if (event.phase != TickEvent.Phase.END || PENDING.isEmpty()) {
@@ -114,6 +156,10 @@ public final class GoatmanAttacks {
             ServerPlayer player = event.getServer().getPlayerList().getPlayer(entry.getKey());
             MutationType type = player == null ? null : TransformationManager.getActive(player);
             if (player == null || !player.isAlive() || !hasDelayedAttack(type)) {
+                continue;
+            }
+            if (type == MutationType.ROTTING_ABOMINATION) {
+                slam(player, entry.getValue().targetId());
                 continue;
             }
             Entity target = player.level().getEntity(entry.getValue().targetId());
@@ -165,6 +211,63 @@ public final class GoatmanAttacks {
         }
         level.sendParticles(ParticleTypes.SWEEP_ATTACK, player.getX() - sinYaw, player.getY(0.6D), player.getZ() + cosYaw,
                 1, 0.0D, 0.0D, 0.0D, 0.0D);
+    }
+
+    /**
+     * The Abomination's blow crashes down as an area attack: everything within {@link #SLAM_RADIUS} of the impact
+     * takes the full attack damage (the struck target through a normal vanilla attack, so crits and enchantments
+     * apply; the others through the same damage type). The impact is the target, if there is one still in reach,
+     * otherwise the block or point the player aims at. A heavy hit's dust, crack and boom mark the spot either way.
+     */
+    private static void slam(ServerPlayer player, int targetId) {
+        if (!(player.level() instanceof ServerLevel level)) {
+            return;
+        }
+        double reach = player.getEntityReach() + REACH_TOLERANCE;
+        Entity target = targetId == NO_TARGET ? null : level.getEntity(targetId);
+        if (target != null && (!target.isAlive() || target.getBoundingBox().distanceToSqr(player.getEyePosition()) > reach * reach)) {
+            target = null;
+        }
+        Vec3 impact;
+        if (target != null) {
+            impact = new Vec3(target.getX(), target.getY(), target.getZ());
+        } else {
+            Vec3 eye = player.getEyePosition();
+            Vec3 end = eye.add(player.getLookAngle().scale(player.getEntityReach()));
+            BlockHitResult hit = level.clip(new ClipContext(eye, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
+            impact = hit.getType() == HitResult.Type.MISS ? end : hit.getLocation();
+        }
+        float damage = (float) player.getAttributeValue(Attributes.ATTACK_DAMAGE);
+        AABB area = new AABB(impact, impact).inflate(SLAM_RADIUS);
+        DELIVERING.add(player.getUUID());
+        try {
+            if (target != null) {
+                player.attack(target);
+            }
+            for (LivingEntity other : level.getEntitiesOfClass(LivingEntity.class, area)) {
+                if (other == player || other == target || !other.isAlive() || other.isSpectator() || player.isAlliedTo(other)
+                        || (other instanceof ArmorStand stand && stand.isMarker())
+                        || (other instanceof TamableAnimal pet && player.getUUID().equals(pet.getOwnerUUID()))
+                        || other.getBoundingBox().distanceToSqr(impact) > SLAM_RADIUS * SLAM_RADIUS) {
+                    continue;
+                }
+                other.hurt(player.damageSources().playerAttack(player), damage);
+            }
+        } finally {
+            DELIVERING.remove(player.getUUID());
+        }
+        // A strong hit: a burst at the impact, a ring of crits and the dust of whatever it landed on.
+        level.sendParticles(ParticleTypes.EXPLOSION, impact.x, impact.y + 0.3D, impact.z, 1, 0.0D, 0.0D, 0.0D, 0.0D);
+        level.sendParticles(ParticleTypes.CRIT, impact.x, impact.y + 0.4D, impact.z, 30, 1.0D, 0.3D, 1.0D, 0.4D);
+        level.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE, impact.x, impact.y + 0.1D, impact.z, 6, 0.8D, 0.05D, 0.8D, 0.01D);
+        BlockPos ground = BlockPos.containing(impact.x, impact.y - 0.2D, impact.z);
+        BlockState floor = level.getBlockState(ground);
+        if (!floor.isAir()) {
+            level.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, floor), impact.x, impact.y + 0.1D, impact.z,
+                    40, 1.2D, 0.1D, 1.2D, 0.15D);
+        }
+        level.playSound(null, impact.x, impact.y, impact.z, SoundEvents.PLAYER_ATTACK_STRONG, SoundSource.PLAYERS, 1.5F, 0.6F);
+        level.playSound(null, impact.x, impact.y, impact.z, SoundEvents.ZOMBIE_ATTACK_WOODEN_DOOR, SoundSource.PLAYERS, 1.0F, 0.5F);
     }
 
     /** Creatures whose melee hits wait for their attack animation: the Goatman, the Fade Hound, the Abomination. */

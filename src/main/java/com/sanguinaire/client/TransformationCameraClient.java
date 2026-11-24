@@ -48,7 +48,7 @@ public final class TransformationCameraClient {
     private static double heightFor(MutationType type) {
         return switch (type) {
             case GOATMAN -> 0.8D;
-            case ELDER_GUARDIAN -> 1.0D;
+            case ELDER_GUARDIAN, ROTTING_ABOMINATION -> 1.0D;
             default -> 0.0D;
         };
     }

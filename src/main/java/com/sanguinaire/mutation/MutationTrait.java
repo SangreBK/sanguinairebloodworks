@@ -59,6 +59,8 @@ public enum MutationTrait {
     BURNS_IN_SUNLIGHT,
     /** You can breathe underwater indefinitely. */
     WATER_BREATHING,
+    /** Too heavy to swim: sinks in water and can't rise or float (Rotting Abomination). */
+    SINKS,
     /** Immune to fire and lava. */
     FIRE_IMMUNE,
     /** Your hits inflict Hunger II for 3 seconds. */

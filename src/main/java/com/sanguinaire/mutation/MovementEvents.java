@@ -18,6 +18,7 @@ import java.lang.reflect.Field;
  * <ul>
  *     <li>{@link MutationTrait#WALL_CLIMBING}: walking into a wall makes the player climb it, like a spider.</li>
  *     <li>{@link MutationTrait#COBWEB_WALKING}: cobwebs no longer slow the player down.</li>
+ *     <li>{@link MutationTrait#SINKS}: the player sinks in water and can't swim up (Rotting Abomination).</li>
  * </ul>
  * Cobweb slowdown is stored in {@code Entity#stuckSpeedMultiplier} (SRG {@code f_19865_}), which has no public
  * setter. It is cleared through {@link ObfuscationReflectionHelper}, which resolves the SRG name both in the
@@ -27,6 +28,10 @@ import java.lang.reflect.Field;
 public final class MovementEvents {
     /** Upward speed while climbing; the vanilla spider/ladder value. */
     private static final double CLIMB_SPEED = 0.2D;
+    /** SINKS: never rising (motion capped at this, below jumping's +0.04 per tick), pulled down a little more each tick. */
+    private static final double SINK_SPEED = -0.05D;
+    private static final double SINK_PULL = 0.01D;
+    private static final double MAX_SINK_SPEED = -0.5D;
 
     private static final Field STUCK_SPEED_MULTIPLIER = findStuckSpeedField();
 
@@ -63,6 +68,18 @@ public final class MovementEvents {
             double vertical = player.isShiftKeyDown() ? Math.max(motion.y, 0.0D) : Math.max(motion.y, CLIMB_SPEED);
             player.setDeltaMovement(motion.x, vertical, motion.z);
             player.resetFallDistance();
+        }
+
+        // After movement, on the controlling client: too heavy to swim. In water it can't sprint-swim or paddle up;
+        // it keeps sinking (settling at about 3 blocks per second) until it lands on the bottom.
+        if (event.phase == TickEvent.Phase.END && player.level().isClientSide() && player.isLocalPlayer()
+                && type.hasTrait(MutationTrait.SINKS) && player.isInWater() && !player.getAbilities().flying) {
+            player.setSwimming(false);
+            player.setSprinting(false);
+            if (!player.onGround()) {
+                Vec3 motion = player.getDeltaMovement();
+                player.setDeltaMovement(motion.x, Math.max(Math.min(motion.y, SINK_SPEED) - SINK_PULL, MAX_SINK_SPEED), motion.z);
+            }
         }
     }
 

@@ -191,21 +191,31 @@ public final class AbilityEffectsClient {
     }
 
     /** One tick of the bile stream, gushing from the mouth along the look direction with a little spread. */
+    /**
+     * The Abomination's bile: a wide, heavy gush from the front of its huge torso (the model is about two blocks
+     * across), fanning out over the 8 blocks the spray reaches, with chunks, green mist and drips.
+     */
     private static void spawnVomit(ClientLevel level, Entity entity) {
         Vec3 look = entity.getViewVector(1.0F);
-        Vec3 mouth = entity.getEyePosition().add(look.scale(0.5D)).subtract(0.0D, 0.25D, 0.0D);
-        for (int i = 0; i < 9; i++) {
-            double speed = 0.55D + RANDOM.nextDouble() * 0.45D;
-            double vx = (look.x + RANDOM.nextGaussian() * 0.09D) * speed;
-            double vy = (look.y + RANDOM.nextGaussian() * 0.09D) * speed + 0.06D;
-            double vz = (look.z + RANDOM.nextGaussian() * 0.09D) * speed;
+        Vec3 side = new Vec3(-look.z, 0.0D, look.x);
+        side = side.lengthSqr() < 1.0E-4D ? new Vec3(1.0D, 0.0D, 0.0D) : side.normalize();
+        Vec3 mouth = entity.getEyePosition().add(look.scale(1.1D)).subtract(0.0D, 0.35D, 0.0D);
+        for (int i = 0; i < 26; i++) {
+            Vec3 from = mouth.add(side.scale((RANDOM.nextDouble() - 0.5D) * 1.2D)).add(0.0D, (RANDOM.nextDouble() - 0.5D) * 0.4D, 0.0D);
+            double speed = 0.7D + RANDOM.nextDouble() * 0.6D;
+            double vx = (look.x + RANDOM.nextGaussian() * 0.17D) * speed;
+            double vy = (look.y + RANDOM.nextGaussian() * 0.12D) * speed + 0.05D;
+            double vz = (look.z + RANDOM.nextGaussian() * 0.17D) * speed;
             ItemParticleOption particle = i % 3 == 0 ? CHUNKS : BILE;
-            level.addParticle(particle, mouth.x, mouth.y, mouth.z, vx, vy, vz);
-            if (i % 3 == 1) {
-                level.addParticle(ParticleTypes.SNEEZE, mouth.x, mouth.y, mouth.z, vx * 0.8D, vy * 0.8D, vz * 0.8D);
+            level.addParticle(particle, from.x, from.y, from.z, vx, vy, vz);
+            if (i % 2 == 1) {
+                level.addParticle(ParticleTypes.SNEEZE, from.x, from.y, from.z, vx * 0.85D, vy * 0.85D, vz * 0.85D);
             }
         }
-        level.addParticle(ParticleTypes.FALLING_DRIPSTONE_WATER, mouth.x, mouth.y - 0.1D, mouth.z, 0.0D, 0.0D, 0.0D);
+        for (int i = 0; i < 3; i++) {
+            Vec3 drip = mouth.add(side.scale((RANDOM.nextDouble() - 0.5D) * 1.2D));
+            level.addParticle(ParticleTypes.FALLING_DRIPSTONE_WATER, drip.x, drip.y - 0.1D, drip.z, 0.0D, 0.0D, 0.0D);
+        }
     }
 
     @SubscribeEvent

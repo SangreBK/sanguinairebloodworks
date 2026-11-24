@@ -1,5 +1,9 @@
 package com.sanguinaire.client;
 
+import com.sanguinaire.network.packet.EmptySwingPacket;
+
+import com.sanguinaire.network.ModNetwork;
+
 import net.minecraft.client.player.Input;
 
 import net.minecraftforge.client.event.MovementInputUpdateEvent;
@@ -134,10 +138,12 @@ public final class GoatmanAnimationClient {
                 || !GoatmanAttacks.hasDelayedAttack(TransformationManager.getActive(minecraft.player))) {
             return;
         }
-        if (minecraft.hitResult != null && minecraft.hitResult.getType() == HitResult.Type.BLOCK) {
-            return; // digging is not an attack
-        }
+        boolean abomination = TransformationManager.getActive(minecraft.player) == MutationType.ROTTING_ABOMINATION;
+        boolean block = minecraft.hitResult != null && minecraft.hitResult.getType() == HitResult.Type.BLOCK;
         long now = minecraft.level.getGameTime();
+        if (block && (!abomination || now < attackReadyAt)) {
+            return; // digging is not an attack (and is never blocked)
+        }
         if (now < attackReadyAt) {
             event.setCanceled(true);
             event.setSwingHand(false);
@@ -145,6 +151,10 @@ public final class GoatmanAnimationClient {
         }
         attackReadyAt = now + attackTicks(minecraft.player);
         startAttack(minecraft.player); // don't wait for the swing to be noticed next tick
+        if (abomination && (minecraft.hitResult == null || minecraft.hitResult.getType() != HitResult.Type.ENTITY)) {
+            // A slam at the air or the ground still crashes down: the server places the blast where the player aims.
+            ModNetwork.sendToServer(new EmptySwingPacket());
+        }
     }
 
     /** A Rotting Abomination stands its ground while it attacks: no walking, strafing or jumping. */
