@@ -1,0 +1,30 @@
+{
+  "parent": "sanguinaire:root",
+  "display": {
+    "icon": {
+      "item": "sanguinaire:vile_cane"
+    },
+    "title": {
+      "translate": "advancements.sanguinaire.vile_cane.title"
+    },
+    "description": {
+      "translate": "advancements.sanguinaire.vile_cane.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "has_vile_cane": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": ["sanguinaire:vile_cane"]
+          }
+        ]
+      }
+    }
+  }
+}

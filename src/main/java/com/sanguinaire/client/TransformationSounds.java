@@ -65,14 +65,19 @@ public final class TransformationSounds {
             return;
         }
         MutationType type = TransformationManager.getActive(player);
-        SoundEvent replacement = type == null ? null : type.getHurtSound(player.isInWater());
+        MutationType.HurtSound replacement = type == null ? null : type.getHurtSoundFull(player.isInWater());
         if (replacement == null) {
             return;
         }
         RandomSource random = SoundInstance.createUnseededRandom();
-        float pitch = (random.nextFloat() - random.nextFloat()) * 0.2F + 1.0F;
-        event.setSound(new SimpleSoundInstance(replacement, SoundSource.PLAYERS, 1.0F, pitch, random,
-                sound.getX(), sound.getY(), sound.getZ()));
+        float variation = (random.nextFloat() - random.nextFloat()) * 0.2F;
+        event.setSound(new SimpleSoundInstance(replacement.sound(), SoundSource.PLAYERS, 1.0F, replacement.pitch() + variation * replacement.pitch(),
+                random, sound.getX(), sound.getY(), sound.getZ()));
+        if (replacement.extra() != null) {
+            // Played alongside the main hurt sound (e.g. the Abomination's deep, wet slime squelch).
+            Minecraft.getInstance().getSoundManager().play(new SimpleSoundInstance(replacement.extra(), SoundSource.PLAYERS, 1.0F,
+                    replacement.extraPitch(), SoundInstance.createUnseededRandom(), sound.getX(), sound.getY(), sound.getZ()));
+        }
     }
 
     private static void replaceStepSound(PlaySoundEvent event, SoundInstance sound) {

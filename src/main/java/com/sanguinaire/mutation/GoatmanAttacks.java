@@ -181,11 +181,18 @@ public final class GoatmanAttacks {
             } finally {
                 DELIVERING.remove(player.getUUID());
             }
+            if (type == MutationType.FADEHOUND) {
+                // The Fade Hound's bite snaps shut like an Evoker's fangs.
+                player.level().playSound(null, target.getX(), target.getY(0.5D), target.getZ(), SoundEvents.EVOKER_FANGS_ATTACK,
+                        SoundSource.PLAYERS, 1.0F, 0.9F + player.getRandom().nextFloat() * 0.2F);
+            }
             if (type != MutationType.GOATMAN) {
-                continue; // the Fade Hound's bite and the Abomination's blow have no sweep or swipe sound
+                continue; // the Abomination's blow has its own slam sounds
             }
             player.level().playSound(null, target.getX(), target.getY(0.5D), target.getZ(), ModSounds.GOATMAN_SWIPE.get(),
                     SoundSource.PLAYERS, 1.3F, 0.55F + player.getRandom().nextFloat() * 0.1F);
+            player.level().playSound(null, target.getX(), target.getY(0.5D), target.getZ(), SoundEvents.GOAT_RAM_IMPACT,
+                    SoundSource.PLAYERS, 1.0F, 0.9F + player.getRandom().nextFloat() * 0.2F);
         }
     }
 

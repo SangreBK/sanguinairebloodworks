@@ -380,6 +380,12 @@ public final class TransformationEvents {
             Vec3 motion = player.getDeltaMovement();
             player.setDeltaMovement(motion.x, Math.min(motion.y, 0.0D), motion.z);
         }
+        // The Goatman leaps like a goat. The server's copy of the jump plays it for everyone.
+        if (event.getEntity() instanceof Player player && !player.level().isClientSide()
+                && TransformationManager.getActive(player) == MutationType.GOATMAN) {
+            player.level().playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.GOAT_LONG_JUMP,
+                    SoundSource.PLAYERS, 1.0F, 1.0F);
+        }
     }
 
     @SubscribeEvent

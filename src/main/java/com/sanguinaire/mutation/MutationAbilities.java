@@ -675,6 +675,7 @@ public final class MutationAbilities {
         Vec3 from = player.position();
         level.sendParticles(ParticleTypes.LARGE_SMOKE, from.x, from.y + halfHeight, from.z, 20, 0.3D, 0.4D, 0.3D, 0.02D);
         level.playSound(null, from.x, from.y, from.z, SoundEvents.ILLUSIONER_MIRROR_MOVE, SoundSource.PLAYERS, 1.0F, 0.8F);
+        level.playSound(null, from.x, from.y, from.z, SoundEvents.CAMEL_DASH, SoundSource.PLAYERS, 1.0F, 1.5F);
         player.teleportTo(destination.x, destination.y, destination.z);
         player.resetFallDistance();
 
