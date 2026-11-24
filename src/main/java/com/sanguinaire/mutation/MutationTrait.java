@@ -33,14 +33,14 @@ public enum MutationTrait {
     HUNGER_ON_KILL,
     /** Blocking your hits with a shield disables that shield for 10 seconds. */
     DISABLES_SHIELDS,
-    /** Anything that hits you gets Nausea II for 15 seconds. */
-    NAUSEATES_ATTACKERS,
+    /** Every other creature within 8 blocks has Nausea I and Hunger I for as long as it stays in range. */
+    SICKENING_AURA,
     /** Projectiles bounce off you and deal no damage. */
     PROJECTILE_IMMUNE,
     /** You cannot jump. */
     CANNOT_JUMP,
-    /** At full health, a single hit cannot kill you; you are left on half a heart. */
-    SURVIVES_ONE_HIT,
+    /** Immune to Poison. */
+    POISON_IMMUNE,
     /** Immune to Slowness. */
     SLOWNESS_IMMUNE,
     /** Taking damage turns you invisible for 4 seconds and blinds the attacker for 8 seconds. */

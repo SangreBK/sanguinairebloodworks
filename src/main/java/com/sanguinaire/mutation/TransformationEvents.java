@@ -78,7 +78,6 @@ public final class TransformationEvents {
     private static final float DETRANSFORM_HEALTH = 1.0F;
     private static final double HIGH_JUMP_BONUS = 0.13D;
     private static final int SHIELD_DISABLE_TICKS = 10 * 20;
-    private static final int NAUSEA_TICKS = 15 * 20;
     private static final int FADE_INVISIBILITY_TICKS = 4 * 20;
     private static final int FADE_BLINDNESS_TICKS = 8 * 20;
     private static final int HUNGER_ON_HIT_TICKS = 3 * 20;
@@ -235,9 +234,6 @@ public final class TransformationEvents {
         if (target instanceof Player victim) {
             Entity attacker = source.getEntity();
             if (attacker instanceof LivingEntity livingAttacker && attacker != victim) {
-                if (TransformationManager.hasTrait(victim, MutationTrait.NAUSEATES_ATTACKERS)) {
-                    livingAttacker.addEffect(new MobEffectInstance(MobEffects.CONFUSION, NAUSEA_TICKS, 1), victim);
-                }
                 if (TransformationManager.hasTrait(victim, MutationTrait.FADES_WHEN_HIT)) {
                     livingAttacker.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, FADE_BLINDNESS_TICKS, 0), victim);
                 }
@@ -289,17 +285,6 @@ public final class TransformationEvents {
             }
         }
         return high;
-    }
-
-    /** Rotting Abomination: at full health, a single hit leaves you on half a heart instead of killing you. */
-    @SubscribeEvent(priority = EventPriority.LOW)
-    public static void onLivingDamage(LivingDamageEvent event) {
-        if (event.getEntity() instanceof Player player && !player.level().isClientSide()
-                && TransformationManager.hasTrait(player, MutationTrait.SURVIVES_ONE_HIT)
-                && player.getHealth() >= player.getMaxHealth()
-                && event.getAmount() >= player.getHealth()) {
-            event.setAmount(Math.max(0.0F, player.getHealth() - 1.0F));
-        }
     }
 
     @SubscribeEvent
@@ -402,6 +387,11 @@ public final class TransformationEvents {
         if (event.getEntity() instanceof Player player
                 && event.getEffectInstance().getEffect() == MobEffects.MOVEMENT_SLOWDOWN
                 && TransformationManager.hasTrait(player, MutationTrait.SLOWNESS_IMMUNE)) {
+            event.setResult(Event.Result.DENY);
+        }
+        if (event.getEntity() instanceof Player player
+                && event.getEffectInstance().getEffect() == MobEffects.POISON
+                && TransformationManager.hasTrait(player, MutationTrait.POISON_IMMUNE)) {
             event.setResult(Event.Result.DENY);
         }
         // Wardens (and their shriekers) don't darken one of their own.

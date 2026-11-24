@@ -18,7 +18,7 @@ public final class SanguinaireConfig {
         ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
         builder.comment("Statistics of the original transformations. Passive traits cannot be changed here.")
                 .push("transformations");
-        GOATMAN = new CreatureStats(builder, "goatman", "Goatman", 100, 28, 0, 20);
+        GOATMAN = new CreatureStats(builder, "goatman", "Goatman", 100, 28, 0, 15);
         ROTTING_ABOMINATION = new CreatureStats(builder, "rotting_abomination", "Rotting Abomination", 300, 15, 0, 10);
         FADEHOUND = new CreatureStats(builder, "fadehound", "Fade Hound", 17, 40, 0, 4);
         builder.pop();

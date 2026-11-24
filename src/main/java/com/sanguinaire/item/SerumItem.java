@@ -20,15 +20,18 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.stats.Stats;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
@@ -114,12 +117,13 @@ public class SerumItem extends Item {
     private static final float TAINTED_BLOOD_WEAKENED_HEALTH = 2.0F;
     private static final int TAINTED_BLOOD_NAUSEA_TICKS = 8 * 20;
 
+    /** How far behind the target the injector must stand: within 60 degrees of straight behind its back. */
+    private static final double BACK_DOT_THRESHOLD = -0.5D;
+
     @Override
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
-        MutationType type = getMutation(stack);
-        UtilitySerum utility = getUtility(stack);
-        if (type == null && utility == null) {
+        if (getMutation(stack) == null && getUtility(stack) == null) {
             return InteractionResultHolder.fail(stack);
         }
         if (level.isClientSide()) {
@@ -128,11 +132,72 @@ public class SerumItem extends Item {
         if (!(player instanceof ServerPlayer serverPlayer)) {
             return InteractionResultHolder.fail(stack);
         }
-        if (utility != null) {
-            return injectUtility(serverPlayer, stack, utility);
+        return inject(serverPlayer, serverPlayer, stack);
+    }
+
+    /**
+     * Sneak and use a serum on another player's back to inject it into them instead of yourself. Clicking them
+     * from the front (or the sides) does nothing, so a serum is never wasted on yourself by accident.
+     */
+    @Override
+    public InteractionResult interactLivingEntity(ItemStack stack, Player player, LivingEntity target, InteractionHand hand) {
+        if (!player.isShiftKeyDown() || !(target instanceof Player targetPlayer) || targetPlayer == player
+                || (getMutation(stack) == null && getUtility(stack) == null)) {
+            return InteractionResult.PASS;
         }
-        if (TransformationManager.isTransformed(serverPlayer) || TransformationSequence.isPending(serverPlayer)) {
-            serverPlayer.displayClientMessage(Component.translatable("message." + Sanguinaire.MOD_ID + ".already_transformed")
+        if (!isBehind(player, targetPlayer)) {
+            if (!player.level().isClientSide()) {
+                player.displayClientMessage(Component.translatable("message." + Sanguinaire.MOD_ID + ".inject_from_behind")
+                        .withStyle(ChatFormatting.DARK_RED), true);
+            }
+            return InteractionResult.CONSUME;
+        }
+        if (player.level().isClientSide()) {
+            return InteractionResult.SUCCESS;
+        }
+        if (!(player instanceof ServerPlayer injector) || !(targetPlayer instanceof ServerPlayer recipient)) {
+            return InteractionResult.FAIL;
+        }
+        // In creative the game passes a copy, so the serum is not used up. Vanilla empties the hand itself when
+        // the stack runs out, so a syringe handed back as the result goes into the inventory instead.
+        InteractionResultHolder<ItemStack> result = inject(injector, recipient, stack);
+        if (result.getResult().consumesAction()) {
+            ItemStack returned = result.getObject();
+            if (returned != stack && !returned.isEmpty() && !injector.getInventory().add(returned)) {
+                injector.drop(returned, false);
+            }
+            recipient.displayClientMessage(Component.translatable("message." + Sanguinaire.MOD_ID + ".injected_by",
+                    injector.getDisplayName()).withStyle(ChatFormatting.DARK_RED), true);
+            return InteractionResult.SUCCESS;
+        }
+        return InteractionResult.CONSUME;
+    }
+
+    /** Whether {@code injector} stands behind {@code target}, judged by the way the target's body faces. */
+    private static boolean isBehind(Player injector, Player target) {
+        Vec3 facing = Vec3.directionFromRotation(0.0F, target.yBodyRot);
+        Vec3 toInjector = new Vec3(injector.getX() - target.getX(), 0.0D, injector.getZ() - target.getZ());
+        if (toInjector.lengthSqr() < 1.0E-4D) {
+            return false;
+        }
+        return facing.dot(toInjector.normalize()) <= BACK_DOT_THRESHOLD;
+    }
+
+    /** Injects the serum in {@code stack} into {@code recipient}; {@code injector} keeps the empty syringe. */
+    private InteractionResultHolder<ItemStack> inject(ServerPlayer injector, ServerPlayer recipient, ItemStack stack) {
+        MutationType type = getMutation(stack);
+        UtilitySerum utility = getUtility(stack);
+        boolean self = injector == recipient;
+        if (utility != null) {
+            return injectUtility(injector, recipient, stack, utility);
+        }
+        if (type == null) {
+            return InteractionResultHolder.fail(stack);
+        }
+        if (TransformationManager.isTransformed(recipient) || TransformationSequence.isPending(recipient)) {
+            injector.displayClientMessage((self
+                    ? Component.translatable("message." + Sanguinaire.MOD_ID + ".already_transformed")
+                    : Component.translatable("message." + Sanguinaire.MOD_ID + ".target_already_transformed", recipient.getDisplayName()))
                     .withStyle(ChatFormatting.DARK_RED), true);
             return InteractionResultHolder.fail(stack);
         }
@@ -141,13 +206,20 @@ public class SerumItem extends Item {
         BloodInfusion blood = getBlood(stack);
         ItemStack consumed = stack.split(1);
         // The change itself follows after a 2-second build-up.
-        TransformationSequence.begin(serverPlayer, type, blood, consumed);
-        serverPlayer.awardStat(Stats.ITEM_USED.get(this));
-        giveOutsideHotbar(serverPlayer, new ItemStack(ModItems.EMPTY_SYRINGE.get()));
+        TransformationSequence.begin(recipient, type, blood, consumed);
+        injector.awardStat(Stats.ITEM_USED.get(this));
+        ItemStack syringe = new ItemStack(ModItems.EMPTY_SYRINGE.get());
+        if (self) {
+            giveOutsideHotbar(injector, syringe);
+        } else if (!injector.getInventory().add(syringe)) {
+            injector.drop(syringe, false);
+        }
         return InteractionResultHolder.success(stack);
     }
 
-    private InteractionResultHolder<ItemStack> injectUtility(ServerPlayer player, ItemStack stack, UtilitySerum serum) {
+    private InteractionResultHolder<ItemStack> injectUtility(ServerPlayer injector, ServerPlayer player, ItemStack stack,
+                                                             UtilitySerum serum) {
+        boolean self = injector == player;
         PlayerMutationData data = PlayerMutationProvider.get(player).orElse(null);
         if (data == null) {
             return InteractionResultHolder.fail(stack);
@@ -155,7 +227,9 @@ public class SerumItem extends Item {
         switch (serum) {
             case TAINTED_BLOOD -> {
                 if (data.hasTaintedBlood()) {
-                    player.displayClientMessage(Component.translatable("message." + Sanguinaire.MOD_ID + ".already_tainted")
+                    injector.displayClientMessage((self
+                            ? Component.translatable("message." + Sanguinaire.MOD_ID + ".already_tainted")
+                            : Component.translatable("message." + Sanguinaire.MOD_ID + ".target_already_tainted", player.getDisplayName()))
                             .withStyle(ChatFormatting.DARK_RED), true);
                     return InteractionResultHolder.fail(stack);
                 }
@@ -185,14 +259,14 @@ public class SerumItem extends Item {
         }
         stack.shrink(1);
         player.level().playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.BOTTLE_EMPTY, SoundSource.PLAYERS, 1.0F, 1.4F);
-        player.awardStat(Stats.ITEM_USED.get(this));
+        injector.awardStat(Stats.ITEM_USED.get(this));
         ModNetwork.syncMutationData(player);
         ItemStack syringe = new ItemStack(ModItems.EMPTY_SYRINGE.get());
         if (stack.isEmpty()) {
-            return InteractionResultHolder.success(syringe); // not transformed: the syringe can go back in the hand
+            return InteractionResultHolder.success(syringe); // the syringe goes back in the injector's hand
         }
-        if (!player.getInventory().add(syringe)) {
-            player.drop(syringe, false);
+        if (!injector.getInventory().add(syringe)) {
+            injector.drop(syringe, false);
         }
         return InteractionResultHolder.success(stack);
     }

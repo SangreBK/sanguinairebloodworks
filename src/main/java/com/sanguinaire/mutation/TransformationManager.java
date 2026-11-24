@@ -29,9 +29,11 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
@@ -93,6 +95,10 @@ public final class TransformationManager {
     private static final double TARGET_CLEAR_RADIUS = 32.0D;
     private static final double FATIGUE_AURA_RADIUS = 16.0D;
     private static final int FATIGUE_AURA_INTERVAL = 200;
+    private static final double SICKENING_AURA_RADIUS = 8.0D;
+    private static final int SICKENING_AURA_INTERVAL = 5;
+    /** Nausea needs a few seconds left to show its full wobble, so the aura keeps 5 seconds topped up. */
+    private static final int SICKENING_AURA_DURATION = 100;
 
     private record StatModifier(Supplier<Attribute> attribute, UUID id, String name, ToDoubleFunction<TransformationStats> target) {
     }
@@ -538,6 +544,9 @@ public final class TransformationManager {
         if (type.hasTrait(MutationTrait.FIRE_IMMUNE)) {
             player.clearFire();
         }
+        if (type.hasTrait(MutationTrait.POISON_IMMUNE)) {
+            player.removeEffect(MobEffects.POISON);
+        }
         if (type.hasTrait(MutationTrait.FLIGHT)) {
             enableFlight(player, type);
         }
@@ -668,6 +677,36 @@ public final class TransformationManager {
                     mob -> mob instanceof Enemy && mob.isAlive())) {
                 mob.addEffect(new MobEffectInstance(MobEffects.DIG_SLOWDOWN, 600, 2));
             }
+        }
+        if (type.hasTrait(MutationTrait.SICKENING_AURA) && age % SICKENING_AURA_INTERVAL == 0) {
+            tickSickeningAura(player);
+        }
+    }
+
+    /**
+     * Rotting Abomination: every other creature within 8 blocks has Nausea I and Hunger I. The effects are kept
+     * topped up with a short duration, and creatures that step out of range lose them at once (only short,
+     * level-I copies are removed, so longer effects from other sources are left alone).
+     */
+    private static void tickSickeningAura(ServerPlayer player) {
+        double radiusSq = SICKENING_AURA_RADIUS * SICKENING_AURA_RADIUS;
+        for (LivingEntity entity : player.level().getEntitiesOfClass(LivingEntity.class,
+                player.getBoundingBox().inflate(SICKENING_AURA_RADIUS * 2.0D),
+                e -> e != player && e.isAlive() && !e.isSpectator())) {
+            if (entity.distanceToSqr(player) <= radiusSq) {
+                entity.addEffect(new MobEffectInstance(MobEffects.CONFUSION, SICKENING_AURA_DURATION, 0, false, true), player);
+                entity.addEffect(new MobEffectInstance(MobEffects.HUNGER, SICKENING_AURA_DURATION, 0, false, true), player);
+            } else {
+                removeAuraEffect(entity, MobEffects.CONFUSION);
+                removeAuraEffect(entity, MobEffects.HUNGER);
+            }
+        }
+    }
+
+    private static void removeAuraEffect(LivingEntity entity, MobEffect effect) {
+        MobEffectInstance instance = entity.getEffect(effect);
+        if (instance != null && instance.getAmplifier() == 0 && instance.getDuration() <= SICKENING_AURA_DURATION) {
+            entity.removeEffect(effect);
         }
     }
 
