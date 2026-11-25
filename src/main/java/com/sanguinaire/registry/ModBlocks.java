@@ -31,12 +31,17 @@ public final class ModBlocks {
     private ModBlocks() {
     }
 
-    /** Wood-and-iron workbench feel: mined fastest with an axe, never requires a specific tool to drop. */
+    /**
+     * Wood-and-iron workbench feel: mined fastest with an axe, never requires a specific tool to drop. No occlusion,
+     * because Nico's models stick out above the block (and have see-through parts): an occluding block has no light
+     * of its own, which would leave those parts dark.
+     */
     private static BlockBehaviour.Properties machineProperties() {
         return BlockBehaviour.Properties.of()
                 .mapColor(MapColor.WOOD)
                 .strength(2.5F)
-                .sound(SoundType.WOOD);
+                .sound(SoundType.WOOD)
+                .noOcclusion();
     }
 
     private static <T extends Block> RegistryObject<T> registerWithItem(String name, Supplier<T> block) {
