@@ -1,18 +1,33 @@
 {
   "variants": {
-    "facing=north": {
+    "facing=north,has_journal=true": {
       "model": "sanguinaire:block/research_station"
     },
-    "facing=east": {
+    "facing=north,has_journal=false": {
+      "model": "sanguinaire:block/research_station_empty"
+    },
+    "facing=east,has_journal=true": {
       "model": "sanguinaire:block/research_station",
       "y": 90
     },
-    "facing=south": {
+    "facing=east,has_journal=false": {
+      "model": "sanguinaire:block/research_station_empty",
+      "y": 90
+    },
+    "facing=south,has_journal=true": {
       "model": "sanguinaire:block/research_station",
       "y": 180
     },
-    "facing=west": {
+    "facing=south,has_journal=false": {
+      "model": "sanguinaire:block/research_station_empty",
+      "y": 180
+    },
+    "facing=west,has_journal=true": {
       "model": "sanguinaire:block/research_station",
+      "y": 270
+    },
+    "facing=west,has_journal=false": {
+      "model": "sanguinaire:block/research_station_empty",
       "y": 270
     }
   }

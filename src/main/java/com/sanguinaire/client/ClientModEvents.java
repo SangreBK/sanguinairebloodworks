@@ -19,6 +19,8 @@ import com.sanguinaire.registry.ModItems;
 import com.sanguinaire.registry.ModMenuTypes;
 import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraftforge.api.distmarker.Dist;
+import com.sanguinaire.client.render.ResearchStationRenderer;
+import com.sanguinaire.registry.ModBlockEntities;
 import net.minecraftforge.client.event.EntityRenderersEvent;
 import net.minecraftforge.client.event.RegisterColorHandlersEvent;
 import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
@@ -49,6 +51,11 @@ public final class ClientModEvents {
             MenuScreens.register(ModMenuTypes.SERUM_SYNTHESIZER.get(), SerumSynthesizerScreen::new);
             MenuScreens.register(ModMenuTypes.SANGUINE_ALEMBIC.get(), SanguineAlembicScreen::new);
         });
+    }
+
+    @SubscribeEvent
+    public static void onRegisterRenderers(EntityRenderersEvent.RegisterRenderers event) {
+        event.registerBlockEntityRenderer(ModBlockEntities.RESEARCH_STATION.get(), ResearchStationRenderer::new);
     }
 
     @SubscribeEvent
