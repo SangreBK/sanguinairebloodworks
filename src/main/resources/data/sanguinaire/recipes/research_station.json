@@ -1,20 +1,23 @@
 {
   "type": "minecraft:crafting_shaped",
-  "category": "misc",
+  "show_notification": false,
   "pattern": [
-    "III",
-    "POP",
-    "PPP"
+    " L=",
+    "#C#",
+    "###"
   ],
   "key": {
-    "I": {
+    "L": {
+      "item": "minecraft:leather"
+    },
+    "=": {
       "item": "minecraft:iron_ingot"
     },
-    "P": {
+    "#": {
       "tag": "minecraft:planks"
     },
-    "O": {
-      "item": "minecraft:observer"
+    "C": {
+      "item": "minecraft:crafting_table"
     }
   },
   "result": {

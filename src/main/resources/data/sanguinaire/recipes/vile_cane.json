@@ -1,17 +1,21 @@
 {
   "type": "minecraft:crafting_shaped",
   "category": "equipment",
+  "show_notification": false,
   "pattern": [
-    "G",
-    "I",
-    "I"
+    "## ",
+    " G ",
+    " S "
   ],
   "key": {
-    "G": {
+    "#": {
       "item": "minecraft:gold_ingot"
     },
-    "I": {
-      "item": "minecraft:iron_ingot"
+    "G": {
+      "item": "minecraft:golden_sword"
+    },
+    "S": {
+      "tag": "minecraft:planks"
     }
   },
   "result": {
