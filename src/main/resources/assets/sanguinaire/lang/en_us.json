@@ -212,7 +212,7 @@
   "journal.sanguinaire.blood.altering_heading": "Altering Blood",
   "journal.sanguinaire.blood.altering": "In a Sanguine Alembic, a Blood Sample and a drinkable potion become an Altered Blood Sample. The potion's effect is bound to the blood and takes hold when the transformation it was mixed into comes to an end. The same sample can go back in for more, up to three different effects.",
   "journal.sanguinaire.weakened.decay_heading": "Decayed Anatomy",
-  "journal.sanguinaire.weakened.decay": "Push the body far enough and it begins to rot from within. Once half of your health is Weakened Hearts, your blows land weaker (5 less damage), a shield gives way the moment it blocks anything, and hunger gnaws faster. Once every heart is weakened it grows worse still: Strength and Resistance no longer take hold, villagers charge you more, and hunger gnaws faster yet. The rot sleeps while you are transformed.",
+  "journal.sanguinaire.weakened.decay": "Push the body far enough and it begins to rot from within. Once half of your health is Weakened Hearts, your blows land weaker (2 less damage, though the Vile Cane's blade is untouched by it), a shield gives way the moment it blocks anything, and hunger gnaws faster. Once every heart is weakened it grows worse still: Strength and Resistance no longer take hold, villagers charge you more, and hunger gnaws faster yet. The rot sleeps while you are transformed.",
   "advancements.sanguinaire.root.title": "A Morbid Curiosity",
   "advancements.sanguinaire.root.description": "Obtain a Research Journal",
   "advancements.sanguinaire.bone_to_pick.title": "A Bone to Pick",

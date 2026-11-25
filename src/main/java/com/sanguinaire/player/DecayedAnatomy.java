@@ -2,6 +2,7 @@ package com.sanguinaire.player;
 
 import com.sanguinaire.advancement.ModAdvancements;
 import com.sanguinaire.Sanguinaire;
+import com.sanguinaire.item.VileCaneItem;
 import com.sanguinaire.mutation.TransformationManager;
 import com.sanguinaire.registry.ModEffects;
 import net.minecraft.server.level.ServerPlayer;
@@ -32,7 +33,7 @@ import java.util.UUID;
  * <b>Decayed Anatomy</b>, the price of going too far. Server-authoritative.
  * <ul>
  *     <li><b>Level I</b> while at least half of the player's maximum health is Weakened Hearts: every hit they deal
- *     does 5 less damage, any hit they block with a shield disables the shield (like an axe), and whenever the hunger
+ *     does 2 less damage (not with the Vile Cane in sword mode), any hit they block with a shield disables the shield (like an axe), and whenever the hunger
  *     bar drains it drains an extra half drumstick.</li>
  *     <li><b>Level II</b> once all of it is: everything above, plus immunity to Strength and Resistance, villager
  *     trades cost more, and the hunger bar drains yet another half drumstick.</li>
@@ -43,7 +44,7 @@ import java.util.UUID;
 @Mod.EventBusSubscriber(modid = Sanguinaire.MOD_ID)
 public final class DecayedAnatomy {
     private static final int CHECK_INTERVAL = 10;
-    private static final float DAMAGE_PENALTY = 5.0F;
+    private static final float DAMAGE_PENALTY = 2.0F;
     /** Each level drains half a drumstick (1 food point) more whenever the hunger bar drains. */
     private static final int EXTRA_FOOD_PER_LEVEL = 1;
     private static final int SHIELD_DISABLE_TICKS = 100;
@@ -121,13 +122,23 @@ public final class DecayedAnatomy {
         }
     }
 
-    /** Level I+: 5 less damage on every hit the player deals. Runs after damage bonuses are added. */
+    /**
+     * Level I+: {@value #DAMAGE_PENALTY} less damage on every hit the player deals, except melee hits with the Vile
+     * Cane in sword mode. Runs after damage bonuses are added.
+     */
     @SubscribeEvent(priority = EventPriority.LOW)
     public static void onLivingHurt(LivingHurtEvent event) {
         Entity source = event.getSource().getEntity();
-        if (source instanceof ServerPlayer attacker && attacker != event.getEntity() && getLevel(attacker) > 0) {
+        if (source instanceof ServerPlayer attacker && attacker != event.getEntity() && getLevel(attacker) > 0
+                && !isVileSwordHit(attacker, event)) {
             event.setAmount(Math.max(0.0F, event.getAmount() - DAMAGE_PENALTY));
         }
+    }
+
+    private static boolean isVileSwordHit(ServerPlayer attacker, LivingHurtEvent event) {
+        var weapon = attacker.getMainHandItem();
+        return event.getSource().getDirectEntity() == attacker && weapon.getItem() instanceof VileCaneItem
+                && VileCaneItem.isSwordMode(weapon);
     }
 
     /** Level I+: a shield that blocks anything gives way. */

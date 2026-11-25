@@ -543,11 +543,6 @@ public final class ConscriptHunts {
             return;
         }
         Entity entity = event.getEntity();
-        if (entity instanceof ConscriptEntity && event.getLevel().dimension() == Level.NETHER
-                && !event.loadedFromDisk()) {
-            event.setCanceled(true); // no Conscripts in the Nether, however they'd get there
-            return;
-        }
         if (entity instanceof Donkey donkey && donkey.getPersistentData().getBoolean(CARAVAN_TAG) && !donkey.isTamed()) {
             donkey.goalSelector.addGoal(1, new CaravanDonkeyGoal(donkey));
         }
