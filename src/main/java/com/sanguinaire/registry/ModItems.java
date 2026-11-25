@@ -1,6 +1,8 @@
 package com.sanguinaire.registry;
 
 import com.sanguinaire.item.VileCaneItem;
+import com.sanguinaire.conscript.NullificationPotionItem;
+import net.minecraftforge.common.ForgeSpawnEggItem;
 
 import com.sanguinaire.Sanguinaire;
 import com.sanguinaire.item.SerumBriefcaseItem;
@@ -59,6 +61,13 @@ public final class ModItems {
     /** Cane / sword for the heavily decayed. Durability 2000, repaired with gold. */
     public static final RegistryObject<VileCaneItem> VILE_CANE = ITEMS.register("vile_cane",
             () -> new VileCaneItem(new Item.Properties().durability(2000)));
+
+    // ---- Conscripts ----------------------------------------------------------------------------------------------
+
+    public static final RegistryObject<NullificationPotionItem> NULLIFICATION_POTION = ITEMS.register("nullification_potion",
+            () -> new NullificationPotionItem(new Item.Properties().stacksTo(1).rarity(Rarity.UNCOMMON)));
+    public static final RegistryObject<ForgeSpawnEggItem> CONSCRIPT_SPAWN_EGG = ITEMS.register("conscript_spawn_egg",
+            () -> new ForgeSpawnEggItem(ModEntities.CONSCRIPT, 0x3B4A5A, 0x8E2B2B, new Item.Properties()));
 
     // ---- Body parts ----------------------------------------------------------------------------------------------
     // Zombie family

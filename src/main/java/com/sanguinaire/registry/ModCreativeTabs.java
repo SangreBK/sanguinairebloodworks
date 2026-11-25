@@ -31,6 +31,8 @@ public final class ModCreativeTabs {
                 output.accept(ModBlocks.SANGUINE_ALEMBIC.get());
                 output.accept(ModItems.SERUM_BRIEFCASE.get());
                 output.accept(ModItems.EMPTY_SYRINGE.get());
+                output.accept(ModItems.NULLIFICATION_POTION.get());
+                output.accept(ModItems.CONSCRIPT_SPAWN_EGG.get());
                 for (BloodType blood : BloodType.values()) {
                     output.accept(BloodSampleItem.create(blood, null));
                 }

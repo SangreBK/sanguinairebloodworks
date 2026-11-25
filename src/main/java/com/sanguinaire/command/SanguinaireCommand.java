@@ -2,6 +2,9 @@ package com.sanguinaire.command;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.BoolArgumentType;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.sanguinaire.conscript.ConscriptHunts;
+import net.minecraft.core.BlockPos;
 import com.sanguinaire.settings.SanguinaireSettings;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
@@ -54,6 +57,21 @@ public final class SanguinaireCommand {
                 .then(Commands.literal("enablefirstperson")
                         .then(Commands.argument("value", BoolArgumentType.bool())
                                 .executes(context -> setFirstPerson(context.getSource(), BoolArgumentType.getBool(context, "value")))))
+                .then(Commands.literal("conscripts")
+                        .then(playerCommand("status", SanguinaireCommand::huntStatus))
+                        .then(playerCommand("hunt", SanguinaireCommand::huntNow))
+                        .then(Commands.literal("hunted")
+                                .then(Commands.argument("player", EntityArgument.player())
+                                        .then(Commands.argument("value", BoolArgumentType.bool())
+                                                .executes(context -> setHunted(context.getSource(), EntityArgument.getPlayer(context, "player"),
+                                                        BoolArgumentType.getBool(context, "value"))))))
+                        .then(Commands.literal("notoriety")
+                                .then(Commands.argument("player", EntityArgument.player())
+                                        .then(Commands.argument("stars", IntegerArgumentType.integer(0, ConscriptHunts.MAX_NOTORIETY))
+                                                .executes(context -> setNotoriety(context.getSource(), EntityArgument.getPlayer(context, "player"),
+                                                        IntegerArgumentType.getInteger(context, "stars"))))))
+                        .then(Commands.literal("caravan")
+                                .executes(context -> spawnCaravan(context.getSource()))))
                 .then(Commands.literal("allowtransformationitems")
                         .then(Commands.argument("value", BoolArgumentType.bool())
                                 .executes(context -> setItems(context.getSource(), BoolArgumentType.getBool(context, "value"))))));
@@ -89,6 +107,42 @@ public final class SanguinaireCommand {
     private static int revokeAllResearch(CommandSourceStack source, ServerPlayer target) {
         ResearchManager.revokeAll(target);
         source.sendSuccess(() -> Component.translatable("commands." + Sanguinaire.MOD_ID + ".revokeallresearch", target.getDisplayName()), true);
+        return 1;
+    }
+
+    private static int huntStatus(CommandSourceStack source, ServerPlayer target) {
+        boolean hunted = ConscriptHunts.isHunted(target);
+        int seconds = ConscriptHunts.getHuntTimer(target) / 20;
+        source.sendSuccess(() -> Component.translatable("commands." + Sanguinaire.MOD_ID + ".conscripts.status." + hunted,
+                target.getDisplayName(), ConscriptHunts.getNotoriety(target), seconds), false);
+        return 1;
+    }
+
+    private static int huntNow(CommandSourceStack source, ServerPlayer target) {
+        ConscriptHunts.huntNow(target);
+        source.sendSuccess(() -> Component.translatable("commands." + Sanguinaire.MOD_ID + ".conscripts.hunt", target.getDisplayName()), true);
+        return 1;
+    }
+
+    private static int setHunted(CommandSourceStack source, ServerPlayer target, boolean value) {
+        ConscriptHunts.setHunted(target, value);
+        source.sendSuccess(() -> Component.translatable("commands." + Sanguinaire.MOD_ID + ".conscripts.hunted." + value,
+                target.getDisplayName()), true);
+        return 1;
+    }
+
+    private static int setNotoriety(CommandSourceStack source, ServerPlayer target, int stars) {
+        ConscriptHunts.setNotoriety(target, stars);
+        source.sendSuccess(() -> Component.translatable("commands." + Sanguinaire.MOD_ID + ".conscripts.notoriety",
+                target.getDisplayName(), stars), true);
+        return 1;
+    }
+
+    private static int spawnCaravan(CommandSourceStack source) throws CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
+        BlockPos pos = ConscriptHunts.surfaceAt(player.serverLevel(), player.getBlockX() + 12, player.getBlockZ());
+        ConscriptHunts.spawnCaravan(player.serverLevel(), pos != null ? pos : player.blockPosition());
+        source.sendSuccess(() -> Component.translatable("commands." + Sanguinaire.MOD_ID + ".conscripts.caravan"), true);
         return 1;
     }
 

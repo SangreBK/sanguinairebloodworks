@@ -206,6 +206,7 @@ public final class TransformationManager {
         player.getFoodData().setFoodLevel(20);
         applyStartEffects(player, type);
         ModAdvancements.grant(player, ModAdvancements.FIRST_TRANSFORMATION);
+        com.sanguinaire.conscript.ConscriptHunts.onTransform(player);
 
         Level level = player.level();
         level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.SKELETON_HURT, SoundSource.PLAYERS, 1.0F, 0.6F);
@@ -608,6 +609,9 @@ public final class TransformationManager {
 
     /** Whether {@code mob} must not target {@code player} because of the player's transformation. */
     public static boolean ignoresPlayer(Mob mob, Player player) {
+        if (mob instanceof com.sanguinaire.conscript.ConscriptEntity) {
+            return false; // Conscripts are trained to see through every disguise
+        }
         MutationType type = getActive(player);
         if (type == null || hasBetrayed(mob, player)) {
             return false;

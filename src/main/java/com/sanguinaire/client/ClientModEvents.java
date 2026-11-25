@@ -20,6 +20,9 @@ import com.sanguinaire.registry.ModMenuTypes;
 import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraftforge.api.distmarker.Dist;
 import com.sanguinaire.client.render.ResearchStationRenderer;
+import com.sanguinaire.client.render.ConscriptRenderer;
+import com.sanguinaire.registry.ModEntities;
+import net.minecraft.client.renderer.entity.ThrownItemRenderer;
 import com.sanguinaire.registry.ModBlockEntities;
 import net.minecraftforge.client.event.EntityRenderersEvent;
 import net.minecraftforge.client.event.RegisterColorHandlersEvent;
@@ -56,6 +59,8 @@ public final class ClientModEvents {
     @SubscribeEvent
     public static void onRegisterRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerBlockEntityRenderer(ModBlockEntities.RESEARCH_STATION.get(), ResearchStationRenderer::new);
+        event.registerEntityRenderer(ModEntities.CONSCRIPT.get(), ConscriptRenderer::new);
+        event.registerEntityRenderer(ModEntities.NULLIFICATION_POTION.get(), ThrownItemRenderer::new);
     }
 
     @SubscribeEvent

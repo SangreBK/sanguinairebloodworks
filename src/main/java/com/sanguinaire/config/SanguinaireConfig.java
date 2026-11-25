@@ -13,6 +13,11 @@ public final class SanguinaireConfig {
     public static final CreatureStats GOATMAN;
     public static final CreatureStats ROTTING_ABOMINATION;
     public static final CreatureStats FADEHOUND;
+    public static final ForgeConfigSpec.BooleanValue HUNTS_ENABLED;
+    public static final ForgeConfigSpec.IntValue HUNT_INTERVAL_MINUTES;
+    public static final ForgeConfigSpec.BooleanValue CARAVANS_ENABLED;
+    public static final ForgeConfigSpec.IntValue CARAVAN_INTERVAL_MINUTES;
+    public static final ForgeConfigSpec.DoubleValue CARAVAN_CHANCE;
 
     static {
         ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
@@ -21,6 +26,19 @@ public final class SanguinaireConfig {
         GOATMAN = new CreatureStats(builder, "goatman", "Goatman", 100, 28, 0, 15);
         ROTTING_ABOMINATION = new CreatureStats(builder, "rotting_abomination", "Rotting Abomination", 300, 15, 0, 10);
         FADEHOUND = new CreatureStats(builder, "fadehound", "Fade Hound", 17, 40, 0, 4);
+        builder.pop();
+        builder.comment("Conscripts: the illager soldiers who hunt players marked by their crimes against nature.")
+                .push("conscripts");
+        HUNTS_ENABLED = builder.comment("Whether hunting parties are sent after hunted players.")
+                .define("huntsEnabled", true);
+        HUNT_INTERVAL_MINUTES = builder.comment("Average minutes between hunting parties (shorter at high notoriety, longer at low).")
+                .defineInRange("huntIntervalMinutes", 10, 1, 240);
+        CARAVANS_ENABLED = builder.comment("Whether Conscript caravans roam the overworld.")
+                .define("caravansEnabled", true);
+        CARAVAN_INTERVAL_MINUTES = builder.comment("Average minutes between caravan spawn attempts.")
+                .defineInRange("caravanIntervalMinutes", 15, 1, 240);
+        CARAVAN_CHANCE = builder.comment("Chance (0-1) that a spawn attempt places a caravan near a random player.")
+                .defineInRange("caravanChance", 0.5D, 0.0D, 1.0D);
         builder.pop();
         SPEC = builder.build();
     }

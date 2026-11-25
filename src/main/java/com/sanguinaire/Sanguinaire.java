@@ -7,6 +7,7 @@ import com.sanguinaire.registry.ModBlockEntities;
 import com.sanguinaire.registry.ModBlocks;
 import com.sanguinaire.registry.ModCreativeTabs;
 import com.sanguinaire.registry.ModEffects;
+import com.sanguinaire.registry.ModEntities;
 import com.sanguinaire.registry.ModItems;
 import com.sanguinaire.registry.ModLootModifiers;
 import com.sanguinaire.registry.ModMenuTypes;
@@ -40,6 +41,7 @@ public final class Sanguinaire {
 
         ModBlocks.BLOCKS.register(modBus);
         ModItems.ITEMS.register(modBus);
+        ModEntities.ENTITY_TYPES.register(modBus);
         ModEffects.EFFECTS.register(modBus);
         ModSounds.SOUNDS.register(modBus);
         ModEnchantments.ENCHANTMENTS.register(modBus);
