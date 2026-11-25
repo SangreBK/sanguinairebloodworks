@@ -3,6 +3,8 @@ package com.sanguinaire.registry;
 import com.sanguinaire.Sanguinaire;
 import com.sanguinaire.conscript.ConscriptEntity;
 import com.sanguinaire.conscript.ThrownNullificationPotion;
+import com.sanguinaire.conscript.ZombifiedConscript;
+import net.minecraft.world.entity.monster.Zombie;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraftforge.event.entity.EntityAttributeCreationEvent;
@@ -12,7 +14,7 @@ import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
 
-/** The mod's entities: the Conscript illager and its thrown Nullification Potion. */
+/** The mod's entities: the Conscript illager, its zombified form and its thrown Nullification Potion. */
 @Mod.EventBusSubscriber(modid = Sanguinaire.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD)
 public final class ModEntities {
     public static final DeferredRegister<EntityType<?>> ENTITY_TYPES =
@@ -23,6 +25,12 @@ public final class ModEntities {
                     .sized(0.6F, 1.95F)
                     .clientTrackingRange(10)
                     .build(Sanguinaire.id("conscript").toString()));
+
+    public static final RegistryObject<EntityType<ZombifiedConscript>> ZOMBIFIED_CONSCRIPT = ENTITY_TYPES.register("zombified_conscript",
+            () -> EntityType.Builder.of(ZombifiedConscript::new, MobCategory.MONSTER)
+                    .sized(0.6F, 1.95F)
+                    .clientTrackingRange(8)
+                    .build(Sanguinaire.id("zombified_conscript").toString()));
 
     public static final RegistryObject<EntityType<ThrownNullificationPotion>> NULLIFICATION_POTION =
             ENTITY_TYPES.register("nullification_potion",
@@ -38,5 +46,6 @@ public final class ModEntities {
     @SubscribeEvent
     public static void onAttributes(EntityAttributeCreationEvent event) {
         event.put(CONSCRIPT.get(), ConscriptEntity.createAttributes().build());
+        event.put(ZOMBIFIED_CONSCRIPT.get(), Zombie.createAttributes().build());
     }
 }

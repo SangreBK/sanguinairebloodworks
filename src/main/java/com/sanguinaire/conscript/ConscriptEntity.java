@@ -3,11 +3,10 @@ package com.sanguinaire.conscript;
 import com.sanguinaire.Sanguinaire;
 import com.sanguinaire.mutation.TransformationManager;
 import com.sanguinaire.registry.ModItems;
-import net.minecraft.ChatFormatting;
+import net.minecraft.core.particles.ItemParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtUtils;
-import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -38,6 +37,8 @@ import net.minecraft.world.entity.ai.goal.RandomStrollGoal;
 import net.minecraft.world.entity.ai.goal.RangedCrossbowAttackGoal;
 import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
+import net.minecraft.world.entity.ai.memory.MemoryModuleType;
+import net.minecraft.world.entity.ai.memory.WalkTarget;
 import net.minecraft.world.entity.ai.util.DefaultRandomPos;
 import net.minecraft.world.entity.monster.AbstractIllager;
 import net.minecraft.world.entity.monster.AbstractSkeleton;
@@ -45,8 +46,15 @@ import net.minecraft.world.entity.monster.CrossbowAttackMob;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.monster.Zombie;
 import net.minecraft.world.entity.monster.ZombifiedPiglin;
+import net.minecraft.world.entity.npc.AbstractVillager;
+import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
+import net.minecraft.world.entity.projectile.ThrownPotion;
+import net.minecraft.world.entity.MobType;
+import net.minecraft.world.InteractionHand;
+import com.sanguinaire.registry.ModEntities;
+import net.minecraftforge.event.ForgeEventFactory;
 import net.minecraft.world.entity.raid.Raider;
 import net.minecraft.world.item.AxeItem;
 import net.minecraft.world.item.BannerItem;
@@ -98,6 +106,11 @@ public class ConscriptEntity extends AbstractIllager implements CrossbowAttackMo
     private static final int FLEE_TICKS = 50;
     private static final int HORN_COOLDOWN = 30 * 20;
     private static final int GRUMBLE_COOLDOWN = 60;
+    /** Out of combat (no target, not hurt for this long) they eat bread until healed. */
+    private static final int OUT_OF_COMBAT_TICKS = 10 * 20;
+    private static final float BREAD_HEAL = 8.0F;
+    private static final int EAT_TICKS = 32;
+    private static final double SCARE_RANGE = 10.0D;
     private static final int ANGER_TICKS = 60 * 20;
     /** A hunting party gives up after this long without seeing its quarry. */
     public static final int GIVE_UP_TICKS = 3 * 60 * 20;
@@ -115,6 +128,7 @@ public class ConscriptEntity extends AbstractIllager implements CrossbowAttackMo
     private static final int DRINK_NONE = 0;
     private static final int DRINK_HEAL = 1;
     private static final int DRINK_FIRE = 2;
+    private static final int EAT_BREAD = 3;
 
     private final MeleeAttackGoal meleeGoal = new MeleeAttackGoal(this, 1.0D, false);
     private final RangedCrossbowAttackGoal<ConscriptEntity> crossbowGoal = new RangedCrossbowAttackGoal<>(this, 1.0D, 8.0F);
@@ -128,6 +142,7 @@ public class ConscriptEntity extends AbstractIllager implements CrossbowAttackMo
     private int nullifyCooldown;
     private int hornCooldown;
     private int grumbleCooldown;
+    private int lastHurtTick = -OUT_OF_COMBAT_TICKS;
     @Nullable
     private UUID angryAt;
     private int angerTicks;
@@ -147,6 +162,7 @@ public class ConscriptEntity extends AbstractIllager implements CrossbowAttackMo
         super(type, level);
         this.xpReward = 10;
         setDropChance(EquipmentSlot.MAINHAND, 1.0F); // always drops its weapon, at random durability
+        setDropChance(EquipmentSlot.OFFHAND, 0.0F); // the golden apple is only borrowed
         reassessWeaponGoal();
     }
 
@@ -174,6 +190,7 @@ public class ConscriptEntity extends AbstractIllager implements CrossbowAttackMo
         goalSelector.addGoal(0, new FloatGoal(this));
         goalSelector.addGoal(1, new BusyGoal());
         goalSelector.addGoal(2, new FleeToHealGoal());
+        goalSelector.addGoal(4, new CureComradeGoal());
         goalSelector.addGoal(5, new TrackQuarryGoal());
         goalSelector.addGoal(8, new RandomStrollGoal(this, 0.6D));
         goalSelector.addGoal(9, new LookAtPlayerGoal(this, Player.class, 15.0F, 1.0F));
@@ -182,9 +199,13 @@ public class ConscriptEntity extends AbstractIllager implements CrossbowAttackMo
         targetSelector.addGoal(1, new HurtByTargetGoal(this, Raider.class).setAlertOthers());
         targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Player.class, 10, true, false, this::isHostileTowards));
         targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(this, Zombie.class, 10, true, false,
-                e -> !(e instanceof ZombifiedPiglin) && e.distanceToSqr(this) <= ZOMBIE_RANGE * ZOMBIE_RANGE));
+                e -> !(e instanceof ZombifiedPiglin) && !(e instanceof ZombifiedConscript)
+                        && e.distanceToSqr(this) <= ZOMBIE_RANGE * ZOMBIE_RANGE));
         targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(this, AbstractSkeleton.class, 10, true, false,
                 e -> e.distanceToSqr(this) <= ZOMBIE_RANGE * ZOMBIE_RANGE));
+        // Villagers are only attacked during a raid; otherwise they just run from Conscripts.
+        targetSelector.addGoal(4, new NearestAttackableTargetGoal<>(this, AbstractVillager.class, 10, true, false,
+                e -> getCurrentRaid() != null));
     }
 
     // ---- Who is an enemy -----------------------------------------------------------------------------------------
@@ -226,14 +247,23 @@ public class ConscriptEntity extends AbstractIllager implements CrossbowAttackMo
     @Override
     public boolean hurt(DamageSource source, float amount) {
         boolean hurt = super.hurt(source, amount);
-        if (hurt && !level().isClientSide() && source.getEntity() instanceof Player player && !ConscriptHunts.isHunted(player)) {
-            angerGroupAt(player);
+        if (hurt && !level().isClientSide()) {
+            lastHurtTick = tickCount;
+            if (isDrinking() && drinkKind == EAT_BREAD) {
+                restoreWeapon(); // dinner is over
+            }
+            if (source.getEntity() instanceof Player player && !ConscriptHunts.isHunted(player)) {
+                angerGroupAt(player);
+            }
         }
         return hurt;
     }
 
     @Override
     public void setTarget(@Nullable LivingEntity target) {
+        if (target instanceof ZombifiedConscript) {
+            target = null; // a fallen comrade is to be saved, not killed
+        }
         LivingEntity previous = getTarget();
         super.setTarget(target);
         if (!level().isClientSide() && !suppressAlert && target != previous && target instanceof ServerPlayer player
@@ -252,15 +282,17 @@ public class ConscriptEntity extends AbstractIllager implements CrossbowAttackMo
             swing(getUsedItemHand());
             level().playSound(null, getX(), getEyeY(), getZ(), SoundEvents.GOAT_HORN_SOUND_VARIANTS.get(2).value(),
                     SoundSource.HOSTILE, 16.0F, 1.0F);
-            player.displayClientMessage(Component.translatable("message." + Sanguinaire.MOD_ID + ".conscript_spotted")
-                    .withStyle(ChatFormatting.DARK_RED, ChatFormatting.BOLD), true);
         }
+        angryPuff();
         for (ConscriptEntity other : group) {
             if (other != this && other.getTarget() == null) {
                 other.suppressAlert = true;
                 other.setTarget(player);
                 other.suppressAlert = false;
                 other.sawQuarry(player);
+                if (other.getTarget() == player) {
+                    other.angryPuff(); // every Conscript now chasing you
+                }
             }
         }
     }
@@ -331,6 +363,7 @@ public class ConscriptEntity extends AbstractIllager implements CrossbowAttackMo
         }
         if (tickCount % 10 == 0) {
             checkNearbyPlayers();
+            scareVillagers();
         }
     }
 
@@ -376,13 +409,33 @@ public class ConscriptEntity extends AbstractIllager implements CrossbowAttackMo
         }
     }
 
-    /** Angry villager particles and a low "no" grunt: keep away. */
+    /** Angry villager particles and an illager mutter: keep away. */
     private void grumble() {
         grumbleCooldown = GRUMBLE_COOLDOWN + random.nextInt(40);
+        angryPuff();
+        playSound(SoundEvents.EVOKER_CELEBRATE, 1.0F, 1.0F);
+    }
+
+    private void angryPuff() {
         if (level() instanceof ServerLevel serverLevel) {
             serverLevel.sendParticles(ParticleTypes.ANGRY_VILLAGER, getX(), getEyeY() + 0.4D, getZ(), 3, 0.3D, 0.2D, 0.3D, 0.0D);
         }
-        playSound(SoundEvents.VILLAGER_NO, 1.0F, 0.5F + random.nextFloat() * 0.1F);
+    }
+
+    /** Outside raids, villagers run from Conscripts. */
+    private void scareVillagers() {
+        if (getCurrentRaid() != null) {
+            return;
+        }
+        for (Villager villager : level().getEntitiesOfClass(Villager.class, getBoundingBox().inflate(SCARE_RANGE))) {
+            if (villager.isSleeping() || villager.isPassenger()) {
+                continue;
+            }
+            Vec3 away = DefaultRandomPos.getPosAway(villager, 16, 7, position());
+            if (away != null) {
+                villager.getBrain().setMemory(MemoryModuleType.WALK_TARGET, new WalkTarget(away, 0.6F, 0));
+            }
+        }
     }
 
     // ---- Nullification Potion ----------------------------------------------------------------------------------------
@@ -435,6 +488,15 @@ public class ConscriptEntity extends AbstractIllager implements CrossbowAttackMo
 
     private void tickDrinking() {
         if (isDrinking()) {
+            if (drinkKind == EAT_BREAD) {
+                if (getTarget() != null) {
+                    restoreWeapon(); // back to work
+                    return;
+                }
+                if (drinkTicks % 4 == 0) {
+                    chew();
+                }
+            }
             if (--drinkTicks <= 0) {
                 finishDrinking();
             }
@@ -456,14 +518,23 @@ public class ConscriptEntity extends AbstractIllager implements CrossbowAttackMo
         if (isOnFire() && fireResCooldown <= 0 && !hasEffect(MobEffects.FIRE_RESISTANCE)) {
             fireResCooldown = FIRE_RES_COOLDOWN;
             startDrinking(DRINK_FIRE);
+            return;
+        }
+        if (getHealth() < getMaxHealth() && getTarget() == null && !isOnFire()
+                && tickCount - lastHurtTick >= OUT_OF_COMBAT_TICKS && isAlive()) {
+            startDrinking(EAT_BREAD);
         }
     }
 
     private void startDrinking(int kind) {
         drinkKind = kind;
-        drinkTicks = kind == DRINK_FIRE ? 20 : 32;
+        drinkTicks = kind == DRINK_FIRE ? 20 : kind == EAT_BREAD ? EAT_TICKS : 32;
         storedWeapon = getMainHandItem().copy();
         entityData.set(DRINKING, true);
+        if (kind == EAT_BREAD) {
+            setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.BREAD));
+            return;
+        }
         ItemStack potion = PotionUtils.setPotion(new ItemStack(Items.POTION),
                 kind == DRINK_FIRE ? Potions.FIRE_RESISTANCE : Potions.HEALING);
         setItemSlot(EquipmentSlot.MAINHAND, potion);
@@ -471,7 +542,21 @@ public class ConscriptEntity extends AbstractIllager implements CrossbowAttackMo
                 0.8F + random.nextFloat() * 0.4F);
     }
 
+    private void chew() {
+        playSound(SoundEvents.GENERIC_EAT, 0.5F + 0.5F * random.nextInt(2), (random.nextFloat() - random.nextFloat()) * 0.2F + 1.0F);
+        if (level() instanceof ServerLevel serverLevel) {
+            Vec3 mouth = getEyePosition().add(getLookAngle().scale(0.3D)).subtract(0.0D, 0.15D, 0.0D);
+            serverLevel.sendParticles(new ItemParticleOption(ParticleTypes.ITEM, new ItemStack(Items.BREAD)),
+                    mouth.x, mouth.y, mouth.z, 4, 0.1D, 0.05D, 0.1D, 0.05D);
+        }
+    }
+
     private void finishDrinking() {
+        if (drinkKind == EAT_BREAD) {
+            heal(BREAD_HEAL);
+            restoreWeapon();
+            return;
+        }
         if (drinkKind == DRINK_HEAL) {
             heal(HEAL_AMOUNT);
         } else if (drinkKind == DRINK_FIRE) {
@@ -511,7 +596,31 @@ public class ConscriptEntity extends AbstractIllager implements CrossbowAttackMo
         if (isDrinking()) {
             restoreWeapon(); // drop the weapon, not the half-drunk potion
         }
+        setItemSlot(EquipmentSlot.OFFHAND, ItemStack.EMPTY);
+        if (tryRiseAsUndead(source)) {
+            return;
+        }
         super.die(source);
+    }
+
+    /** Killed by an undead mob: rises as a Zombified Conscript instead of dying. */
+    private boolean tryRiseAsUndead(DamageSource source) {
+        if (!(level() instanceof ServerLevel serverLevel) || !(source.getEntity() instanceof LivingEntity killer)
+                || killer.getMobType() != MobType.UNDEAD || killer instanceof Player || isRemoved()
+                || !ForgeEventFactory.canLivingConvert(this, ModEntities.ZOMBIFIED_CONSCRIPT.get(), timer -> { })) {
+            return false;
+        }
+        ItemStack weapon = getMainHandItem().copy();
+        setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
+        ZombifiedConscript zombie = convertTo(ModEntities.ZOMBIFIED_CONSCRIPT.get(), false);
+        if (zombie == null) {
+            setItemSlot(EquipmentSlot.MAINHAND, weapon);
+            return false;
+        }
+        zombie.setOriginalWeapon(weapon);
+        serverLevel.levelEvent(null, 1026, zombie.blockPosition(), 0); // "zombie infects villager" sound
+        ForgeEventFactory.onLivingConvert(this, zombie);
+        return true;
     }
 
     // ---- Weapons ---------------------------------------------------------------------------------------------------
@@ -677,6 +786,9 @@ public class ConscriptEntity extends AbstractIllager implements CrossbowAttackMo
         usedHealingPotion = tag.getBoolean("UsedHealingPotion");
         fireResCooldown = tag.getInt("FireResCooldown");
         setDropChance(EquipmentSlot.MAINHAND, 1.0F); // older Conscripts saved the vanilla chance
+        if (getOffhandItem().is(Items.GOLDEN_APPLE)) {
+            setItemSlot(EquipmentSlot.OFFHAND, ItemStack.EMPTY); // saved mid-cure
+        }
         if (tag.contains("HuntTarget")) {
             huntTarget = NbtUtils.loadUUID(tag.get("HuntTarget"));
             ticksSinceSighted = tag.getInt("TicksSinceSighted");
@@ -720,7 +832,10 @@ public class ConscriptEntity extends AbstractIllager implements CrossbowAttackMo
         public void tick() {
             LivingEntity target = getTarget();
             if (target == null) {
-                return; // keep whatever path they were on
+                if (drinkKind == EAT_BREAD) {
+                    getNavigation().stop(); // sit down to eat
+                }
+                return; // otherwise keep whatever path they were on
             }
             getLookControl().setLookAt(target, 30.0F, 30.0F);
             if (--repath > 0) {
@@ -769,6 +884,130 @@ public class ConscriptEntity extends AbstractIllager implements CrossbowAttackMo
             if (away != null) {
                 getNavigation().moveTo(away.x, away.y, away.z, 1.2D);
             }
+        }
+    }
+
+    /**
+     * A fallen comrade risen as a Zombified Conscript is saved, not killed: out of combat, a Conscript splashes it with
+     * Weakness (thrown like the Nullification Potion, so it can miss), then walks up and feeds it a golden apple.
+     */
+    private class CureComradeGoal extends Goal {
+        private static final double SEARCH_RANGE = 16.0D;
+        @Nullable
+        private ZombifiedConscript patient;
+        private int throwCooldown;
+        private int repath;
+        private int timeout;
+
+        CureComradeGoal() {
+            setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
+        }
+
+        private boolean busy() {
+            return getTarget() != null || isDrinking() || isFleeingToHeal();
+        }
+
+        @Override
+        public boolean canUse() {
+            if (busy() || tickCount % 10 != 0) {
+                return false;
+            }
+            patient = null;
+            double best = Double.MAX_VALUE;
+            for (ZombifiedConscript zombie : level().getEntitiesOfClass(ZombifiedConscript.class, getBoundingBox().inflate(SEARCH_RANGE))) {
+                double distanceSq = distanceToSqr(zombie);
+                if (zombie.isAlive() && !zombie.isCuring() && distanceSq < best && hasLineOfSight(zombie)) {
+                    best = distanceSq;
+                    patient = zombie;
+                }
+            }
+            return patient != null;
+        }
+
+        @Override
+        public boolean canContinueToUse() {
+            return patient != null && patient.isAlive() && !patient.isCuring() && !busy() && timeout > 0
+                    && distanceToSqr(patient) <= 24.0D * 24.0D;
+        }
+
+        @Override
+        public void start() {
+            timeout = 60 * 20;
+            repath = 0;
+        }
+
+        @Override
+        public void stop() {
+            if (getOffhandItem().is(Items.GOLDEN_APPLE)) {
+                setItemSlot(EquipmentSlot.OFFHAND, ItemStack.EMPTY);
+            }
+            patient = null;
+            getNavigation().stop();
+        }
+
+        @Override
+        public boolean requiresUpdateEveryTick() {
+            return true;
+        }
+
+        @Override
+        public void tick() {
+            if (patient == null) {
+                return;
+            }
+            timeout--;
+            if (throwCooldown > 0) {
+                throwCooldown--;
+            }
+            getLookControl().setLookAt(patient, 30.0F, 30.0F);
+            double distanceSq = distanceToSqr(patient);
+            if (!patient.hasEffect(MobEffects.WEAKNESS)) {
+                // Step 1: weaken it.
+                if (distanceSq <= 10.0D * 10.0D && distanceSq >= 2.5D * 2.5D && throwCooldown <= 0 && hasLineOfSight(patient)) {
+                    getNavigation().stop();
+                    throwWeakness(patient);
+                    throwCooldown = 60 + random.nextInt(20);
+                } else if (distanceSq > 7.0D * 7.0D && --repath <= 0) {
+                    repath = 10;
+                    getNavigation().moveTo(patient, 1.0D);
+                } else if (distanceSq < 2.5D * 2.5D && --repath <= 0) {
+                    repath = 10;
+                    Vec3 away = DefaultRandomPos.getPosAway(ConscriptEntity.this, 6, 3, patient.position());
+                    if (away != null) {
+                        getNavigation().moveTo(away.x, away.y, away.z, 1.0D);
+                    }
+                }
+                return;
+            }
+            // Step 2: feed it a golden apple.
+            if (!getOffhandItem().is(Items.GOLDEN_APPLE)) {
+                setItemSlot(EquipmentSlot.OFFHAND, new ItemStack(Items.GOLDEN_APPLE));
+            }
+            if (distanceSq <= 2.2D * 2.2D) {
+                swing(InteractionHand.OFF_HAND);
+                playSound(SoundEvents.GENERIC_EAT, 1.0F, 1.0F);
+                setItemSlot(EquipmentSlot.OFFHAND, ItemStack.EMPTY);
+                patient.startCuring();
+            } else if (--repath <= 0) {
+                repath = 10;
+                getNavigation().moveTo(patient, 1.1D);
+            }
+        }
+
+        private void throwWeakness(ZombifiedConscript target) {
+            Vec3 motion = target.getDeltaMovement();
+            double dx = target.getX() + motion.x - getX();
+            double dy = target.getEyeY() - 1.1D - getY();
+            double dz = target.getZ() + motion.z - getZ();
+            double horizontal = Math.sqrt(dx * dx + dz * dz);
+            ThrownPotion potion = new ThrownPotion(level(), ConscriptEntity.this);
+            potion.setItem(PotionUtils.setPotion(new ItemStack(Items.SPLASH_POTION), Potions.WEAKNESS));
+            potion.setXRot(potion.getXRot() - 20.0F);
+            potion.shoot(dx, dy + horizontal * 0.2D, dz, 0.75F, 8.0F);
+            swing(InteractionHand.MAIN_HAND);
+            level().playSound(null, getX(), getY(), getZ(), SoundEvents.WITCH_THROW, getSoundSource(), 1.0F,
+                    0.8F + random.nextFloat() * 0.4F);
+            level().addFreshEntity(potion);
         }
     }
 

@@ -68,6 +68,8 @@ public final class ModItems {
             () -> new NullificationPotionItem(new Item.Properties().stacksTo(1).rarity(Rarity.UNCOMMON)));
     public static final RegistryObject<ForgeSpawnEggItem> CONSCRIPT_SPAWN_EGG = ITEMS.register("conscript_spawn_egg",
             () -> new ForgeSpawnEggItem(ModEntities.CONSCRIPT, 0x3B4A5A, 0x8E2B2B, new Item.Properties()));
+    public static final RegistryObject<ForgeSpawnEggItem> ZOMBIFIED_CONSCRIPT_SPAWN_EGG = ITEMS.register("zombified_conscript_spawn_egg",
+            () -> new ForgeSpawnEggItem(ModEntities.ZOMBIFIED_CONSCRIPT, 0x3B4A5A, 0x5E8A4A, new Item.Properties()));
 
     // ---- Body parts ----------------------------------------------------------------------------------------------
     // Zombie family

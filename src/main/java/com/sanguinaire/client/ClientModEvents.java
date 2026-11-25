@@ -60,6 +60,7 @@ public final class ClientModEvents {
     public static void onRegisterRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerBlockEntityRenderer(ModBlockEntities.RESEARCH_STATION.get(), ResearchStationRenderer::new);
         event.registerEntityRenderer(ModEntities.CONSCRIPT.get(), ConscriptRenderer::new);
+        event.registerEntityRenderer(ModEntities.ZOMBIFIED_CONSCRIPT.get(), com.sanguinaire.client.render.ZombifiedConscriptRenderer::new);
         event.registerEntityRenderer(ModEntities.NULLIFICATION_POTION.get(), ThrownItemRenderer::new);
     }
 

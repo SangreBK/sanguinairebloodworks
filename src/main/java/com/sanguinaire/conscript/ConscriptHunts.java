@@ -4,6 +4,7 @@ import com.sanguinaire.Sanguinaire;
 import com.sanguinaire.advancement.ModAdvancements;
 import com.sanguinaire.config.SanguinaireConfig;
 import com.sanguinaire.registry.ModEntities;
+import com.sanguinaire.research.ResearchManager;
 import com.sanguinaire.research.ResearchNote;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import net.minecraft.ChatFormatting;
@@ -24,8 +25,10 @@ import net.minecraft.world.Difficulty;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobSpawnType;
+import net.minecraft.world.entity.ai.goal.AvoidEntityGoal;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.animal.horse.Donkey;
+import net.minecraft.world.entity.npc.WanderingTrader;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.raid.Raid;
 import net.minecraft.world.entity.raid.Raider;
@@ -73,6 +76,8 @@ import java.util.Set;
 @Mod.EventBusSubscriber(modid = Sanguinaire.MOD_ID)
 public final class ConscriptHunts {
     public static final String CRIMES_AGAINST_NATURE = "crimes_against_nature";
+    /** Journal note id (stored with the Torn Page notes) that unlocks "The Hunt" category. */
+    public static final String HUNT_JOURNAL_NOTE = "conscript_hunt";
     public static final int MAX_NOTORIETY = 5;
     private static final String TAG = Sanguinaire.MOD_ID + "_hunt";
     private static final String HUNTED = "Hunted";
@@ -155,6 +160,10 @@ public final class ConscriptHunts {
         tag.putInt(CALM, 0);
         tag.putInt(HUNT_TIMER, huntInterval(player));
         ModAdvancements.grant(player, CRIMES_AGAINST_NATURE);
+        if (ResearchManager.unlockNote(player, HUNT_JOURNAL_NOTE)) {
+            player.sendSystemMessage(Component.translatable("message." + Sanguinaire.MOD_ID + ".journal_hunt_entry")
+                    .withStyle(ChatFormatting.GOLD));
+        }
         player.connection.send(new ClientboundSoundPacket(SoundEvents.RAID_HORN, SoundSource.HOSTILE,
                 player.getX(), player.getY(), player.getZ(), 64.0F, 1.0F, player.getRandom().nextLong()));
     }
@@ -228,8 +237,13 @@ public final class ConscriptHunts {
 
     @SubscribeEvent
     public static void onLogin(PlayerEvent.PlayerLoggedInEvent event) {
-        if (event.getEntity() instanceof ServerPlayer player && !isHunted(player) && hasCommittedCrimes(player)) {
+        if (!(event.getEntity() instanceof ServerPlayer player)) {
+            return;
+        }
+        if (!isHunted(player) && hasCommittedCrimes(player)) {
             markHunted(player); // players from before Conscripts existed
+        } else if (isHunted(player)) {
+            ResearchManager.unlockNote(player, HUNT_JOURNAL_NOTE); // hunted before the journal entry existed
         }
     }
 
@@ -506,6 +520,10 @@ public final class ConscriptHunts {
         Entity entity = event.getEntity();
         if (entity instanceof Donkey donkey && donkey.getPersistentData().getBoolean(CARAVAN_TAG) && !donkey.isTamed()) {
             donkey.goalSelector.addGoal(1, new CaravanDonkeyGoal(donkey));
+        }
+        // Wandering traders keep well away from Conscripts (villagers are scared off by the Conscripts themselves).
+        if (entity instanceof WanderingTrader trader) {
+            trader.goalSelector.addGoal(1, new AvoidEntityGoal<>(trader, ConscriptEntity.class, 10.0F, 0.5D, 0.5D));
         }
         if (!event.loadedFromDisk() && entity instanceof Raider raider && !(entity instanceof ConscriptEntity)
                 && raider.getCurrentRaid() != null && event.getLevel() instanceof ServerLevel serverLevel) {

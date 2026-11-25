@@ -5,6 +5,7 @@ import net.minecraft.client.resources.language.I18n;
 import com.sanguinaire.Sanguinaire;
 import com.sanguinaire.blood.BloodType;
 import com.sanguinaire.bodypart.BodyPartDropTable;
+import com.sanguinaire.conscript.ConscriptHunts;
 import com.sanguinaire.mutation.MutationType;
 import com.sanguinaire.mutation.UtilitySerum;
 import com.sanguinaire.player.PlayerMutationProvider;
@@ -103,7 +104,9 @@ public class SurgicalJournalScreen extends Screen {
     private enum Category {
         ENHANCING("category.enhancing"),
         TRANSFORMATIONS("category.transformations"),
-        BLOOD_TYPES("category.blood_types");
+        BLOOD_TYPES("category.blood_types"),
+        /** Only listed once the reader is hunted by Conscripts. */
+        HUNT("category.hunt");
 
         private final String labelKey;
         /** Remembered while the game runs, so the index looks the same each time the journal is opened. */
@@ -191,6 +194,14 @@ public class SurgicalJournalScreen extends Screen {
         categories.put(Category.ENHANCING, enhancing);
         categories.put(Category.TRANSFORMATIONS, transformations);
         categories.put(Category.BLOOD_TYPES, bloodTypes);
+        if (player != null && ResearchManager.isNoteUnlocked(player, ConscriptHunts.HUNT_JOURNAL_NOTE)) {
+            List<Entry> hunt = new ArrayList<>();
+            hunt.add(new Entry("hunt:conscripts", Component.translatable(PREFIX + "hunt.conscripts.title"),
+                    lines -> buildHuntEntry(lines, "conscripts", "who", "nullification", "escape", "undead")));
+            hunt.add(new Entry("hunt:notoriety", Component.translatable(PREFIX + "hunt.notoriety.title"),
+                    lines -> buildHuntEntry(lines, "notoriety", "rises", "falls", "effect")));
+            categories.put(Category.HUNT, hunt);
+        }
         researchedCount = player == null ? 0 : ResearchManager.getResearchedCount(player);
     }
 
@@ -214,6 +225,9 @@ public class SurgicalJournalScreen extends Screen {
             list.add(new Row(entry, null, false));
         }
         for (Category category : Category.values()) {
+            if (!categories.containsKey(category)) {
+                continue; // a category the reader hasn't unlocked yet
+            }
             list.add(new Row(null, category, false));
             if (!category.open) {
                 continue;
@@ -348,6 +362,19 @@ public class SurgicalJournalScreen extends Screen {
         addSpacer(lines);
         addHeading(lines, "blood.altering_heading");
         addWrapped(lines, Component.translatable(PREFIX + "blood.altering"), INK);
+    }
+
+    /** A Hunt entry: title, intro, then one headed section per part. */
+    private void buildHuntEntry(List<Line> lines, String id, String... sections) {
+        String base = "hunt." + id + ".";
+        addTitle(lines, Component.translatable(PREFIX + base + "title"));
+        addSpacer(lines);
+        addWrapped(lines, Component.translatable(PREFIX + base + "intro"), INK);
+        for (String section : sections) {
+            addSpacer(lines);
+            addHeading(lines, base + section + "_heading");
+            addWrapped(lines, Component.translatable(PREFIX + base + section), INK);
+        }
     }
 
     private static Component mobName(EntityType<?> type) {
