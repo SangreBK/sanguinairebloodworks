@@ -609,8 +609,11 @@ public final class TransformationManager {
 
     /** Whether {@code mob} must not target {@code player} because of the player's transformation. */
     public static boolean ignoresPlayer(Mob mob, Player player) {
-        if (mob instanceof com.sanguinaire.conscript.ConscriptEntity) {
-            return false; // Conscripts are trained to see through every disguise
+        if (mob instanceof com.sanguinaire.conscript.ConscriptEntity conscript) {
+            // Conscripts see through every disguise but one: a villager's scent is too confusing to track.
+            // During a raid they attack villagers anyway, so the disguise is no help then.
+            return getActive(player) == MutationType.VILLAGER && conscript.getCurrentRaid() == null
+                    && !hasBetrayed(mob, player);
         }
         MutationType type = getActive(player);
         if (type == null || hasBetrayed(mob, player)) {

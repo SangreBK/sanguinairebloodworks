@@ -197,7 +197,7 @@ public class SurgicalJournalScreen extends Screen {
         if (player != null && ResearchManager.isNoteUnlocked(player, ConscriptHunts.HUNT_JOURNAL_NOTE)) {
             List<Entry> hunt = new ArrayList<>();
             hunt.add(new Entry("hunt:conscripts", Component.translatable(PREFIX + "hunt.conscripts.title"),
-                    lines -> buildHuntEntry(lines, "conscripts", "who", "nullification", "escape", "undead")));
+                    lines -> buildHuntEntry(lines, "conscripts", "who", "nullification", "disguise", "escape", "undead")));
             hunt.add(new Entry("hunt:notoriety", Component.translatable(PREFIX + "hunt.notoriety.title"),
                     lines -> buildHuntEntry(lines, "notoriety", "rises", "falls", "effect")));
             categories.put(Category.HUNT, hunt);

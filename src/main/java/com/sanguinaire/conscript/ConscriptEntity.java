@@ -212,8 +212,9 @@ public class ConscriptEntity extends AbstractIllager implements CrossbowAttackMo
 
     /** Players this Conscript will attack: the hunted (from afar), provokers, and anyone during a raid. */
     public boolean isHostileTowards(LivingEntity entity) {
-        if (!(entity instanceof Player player) || player.isCreative() || player.isSpectator()) {
-            return false;
+        if (!(entity instanceof Player player) || player.isCreative() || player.isSpectator()
+                || TransformationManager.ignoresPlayer(this, player)) {
+            return false; // includes players disguised as villagers
         }
         if (ConscriptHunts.isHunted(player)) {
             return distanceToSqr(player) <= SPOT_RANGE * SPOT_RANGE;
@@ -380,8 +381,8 @@ public class ConscriptEntity extends AbstractIllager implements CrossbowAttackMo
         }
         if (getTarget() == quarry && tickCount % 10 == 0 && hasLineOfSight(quarry)) {
             sawQuarry(quarry);
-        } else if (++ticksSinceSighted % TRAIL_REFRESH_TICKS == 0) {
-            lastKnownPos = quarry.position(); // they follow the trail, but only now and then
+        } else if (++ticksSinceSighted % TRAIL_REFRESH_TICKS == 0 && !TransformationManager.ignoresPlayer(this, quarry)) {
+            lastKnownPos = quarry.position(); // they follow the trail, but only now and then (and not a villager's)
         }
         if (ticksSinceSighted > GIVE_UP_TICKS) {
             ConscriptHunts.onSquadGaveUp(quarry, squadId);
@@ -395,7 +396,8 @@ public class ConscriptEntity extends AbstractIllager implements CrossbowAttackMo
             return;
         }
         for (Player player : level().getEntitiesOfClass(Player.class, getBoundingBox().inflate(WARN_RANGE))) {
-            if (player.isCreative() || player.isSpectator() || ConscriptHunts.isHunted(player) || isAngryAt(player)) {
+            if (player.isCreative() || player.isSpectator() || ConscriptHunts.isHunted(player) || isAngryAt(player)
+                    || TransformationManager.ignoresPlayer(this, player)) {
                 continue;
             }
             double distanceSq = distanceToSqr(player);
@@ -725,7 +727,14 @@ public class ConscriptEntity extends AbstractIllager implements CrossbowAttackMo
         if (isAggressive() && !isDrinking() && getMainHandItem().getItem() instanceof AxeItem) {
             return AbstractIllager.IllagerArmPose.ATTACKING;
         }
-        return isCelebrating() ? AbstractIllager.IllagerArmPose.CELEBRATING : AbstractIllager.IllagerArmPose.NEUTRAL;
+        if (isCelebrating()) {
+            return AbstractIllager.IllagerArmPose.CELEBRATING;
+        }
+        // Drinking, eating or carrying a golden apple: arms out, item in hand. Otherwise at ease, arms crossed.
+        if (isDrinking() || !getOffhandItem().isEmpty()) {
+            return AbstractIllager.IllagerArmPose.NEUTRAL;
+        }
+        return AbstractIllager.IllagerArmPose.CROSSED;
     }
 
     // ---- Raider --------------------------------------------------------------------------------------------------

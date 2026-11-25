@@ -69,6 +69,7 @@ public final class ClientModEvents {
         event.registerLayerDefinition(ModModelLayers.GOATMAN, GoatmanModel::createBodyLayer);
         event.registerLayerDefinition(ModModelLayers.ROTTING_ABOMINATION, RottingAbominationModel::createBodyLayer);
         event.registerLayerDefinition(ModModelLayers.FADEHOUND, FadeHoundModel::createBodyLayer);
+        event.registerLayerDefinition(ModModelLayers.CONSCRIPT, com.sanguinaire.client.model.ConscriptModel::createBodyLayer);
     }
 
     @SubscribeEvent

@@ -3,6 +3,8 @@ package com.sanguinaire.conscript;
 import com.sanguinaire.Sanguinaire;
 import com.sanguinaire.advancement.ModAdvancements;
 import com.sanguinaire.config.SanguinaireConfig;
+import com.sanguinaire.mutation.MutationType;
+import com.sanguinaire.mutation.TransformationManager;
 import com.sanguinaire.registry.ModEntities;
 import com.sanguinaire.research.ResearchManager;
 import com.sanguinaire.research.ResearchNote;
@@ -249,9 +251,21 @@ public final class ConscriptHunts {
 
     /** Every transformation raises notoriety. Called right after the transformation starts. */
     public static void onTransform(ServerPlayer player) {
-        if (isHunted(player)) {
+        if (!isHunted(player)) {
+            return;
+        }
+        if (isDisguised(player)) {
+            // Becoming a villager throws them off completely: notoriety back to 0.
+            changeNotoriety(player, -MAX_NOTORIETY);
+            callOffSquads(player);
+        } else {
             changeNotoriety(player, 1);
         }
+    }
+
+    /** In villager form: Conscripts can't pick up the scent, so no hunting party is sent. */
+    public static boolean isDisguised(Player player) {
+        return TransformationManager.getActive(player) == MutationType.VILLAGER;
     }
 
     @SubscribeEvent
@@ -317,6 +331,11 @@ public final class ConscriptHunts {
         if (pending > 0) {
             pending -= 20;
             tag.putInt(PENDING, pending);
+            if (pending <= 0 && isDisguised(player)) {
+                tag.putInt(PENDING, 0); // they lose the scent before arriving
+                tag.putInt(HUNT_TIMER, RETRY_TICKS);
+                return;
+            }
             if (pending <= 0 && canBeHuntedNow(player)) {
                 BlockPos at = new BlockPos(tag.getInt("PendingX"), tag.getInt("PendingY"), tag.getInt("PendingZ"));
                 spawnHuntingParty(player, at);
@@ -328,7 +347,7 @@ public final class ConscriptHunts {
             tag.putInt(HUNT_TIMER, timer);
             return;
         }
-        if (!canBeHuntedNow(player) || squadStillHunting(player)) {
+        if (!canBeHuntedNow(player) || isDisguised(player) || squadStillHunting(player)) {
             tag.putInt(HUNT_TIMER, RETRY_TICKS);
             return;
         }

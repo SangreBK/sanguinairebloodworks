@@ -4,17 +4,16 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.sanguinaire.Sanguinaire;
 import com.sanguinaire.client.model.ZombifiedConscriptModel;
 import com.sanguinaire.conscript.ZombifiedConscript;
-import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.MobRenderer;
 import net.minecraft.resources.ResourceLocation;
 
-/** Placeholder look: illager body, rotting uniform ({@code textures/entity/zombified_conscript.png}); shakes while being cured. */
+/** Nico's Conscript model with the zombified texture ({@code textures/entity/zombified_conscript.png}); shakes while being cured. */
 public class ZombifiedConscriptRenderer extends MobRenderer<ZombifiedConscript, ZombifiedConscriptModel> {
     private static final ResourceLocation TEXTURE = Sanguinaire.id("textures/entity/zombified_conscript.png");
 
     public ZombifiedConscriptRenderer(EntityRendererProvider.Context context) {
-        super(context, new ZombifiedConscriptModel(context.bakeLayer(ModelLayers.PILLAGER)), 0.5F);
+        super(context, new ZombifiedConscriptModel(context.bakeLayer(ModModelLayers.CONSCRIPT)), 0.5F);
     }
 
     @Override
