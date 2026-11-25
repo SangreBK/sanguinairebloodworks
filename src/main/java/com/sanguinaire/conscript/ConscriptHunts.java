@@ -50,19 +50,16 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 
 /**
  * The Conscripts' hunt.
  * <ul>
  *     <li><b>Hunted</b>: a player who reads a Torn Page or transforms with a serum for the first time is marked, for
  *     good ("Crimes Against Nature"). Every Conscript is hostile to them and can spot them from 40 blocks.</li>
- *     <li><b>Notoriety</b> (0 to 5 stars): +1 for every transformation and for every 5 Conscripts killed; -1 after
+ *     <li><b>Notoriety</b> (0 to 5, internal only, never shown to the player): +1 for every transformation and for every 5 Conscripts killed; -1 after
  *     20 minutes without either. It sets the size of hunting parties (2 to 6) and how often they come.</li>
  *     <li><b>Hunting parties</b>: about every 10 minutes (sooner at high notoriety) a warning sounds, and 10 seconds
  *     later a party arrives 30-48 blocks away, following the player's trail. They give up after 3 minutes without
@@ -90,10 +87,8 @@ public final class ConscriptHunts {
     private static final int WARNING_TICKS = 10 * 20;
     private static final int RETRY_TICKS = 60 * 20;
     private static final int KILLS_PER_STAR = 5;
-    private static final int WARN_COOLDOWN = 30 * 20;
     private static final double RAID_RANGE = 96.0D;
 
-    private static final Map<UUID, Long> LAST_WARNING = new HashMap<>();
     private static final Set<Integer> ANNOUNCED_SQUADS = new HashSet<>();
     private static final Set<String> REINFORCED_WAVES = new HashSet<>();
     private static final List<PendingReinforcement> RAID_QUEUE = new ArrayList<>();
@@ -138,10 +133,6 @@ public final class ConscriptHunts {
         data(player).putInt(NOTORIETY, Mth.clamp(notoriety, 0, MAX_NOTORIETY));
     }
 
-    private static Component stars(int notoriety) {
-        return Component.literal("★".repeat(notoriety) + "☆".repeat(MAX_NOTORIETY - notoriety)).withStyle(ChatFormatting.GOLD);
-    }
-
     private static void changeNotoriety(ServerPlayer player, int delta) {
         int before = getNotoriety(player);
         int after = Mth.clamp(before + delta, 0, MAX_NOTORIETY);
@@ -150,10 +141,7 @@ public final class ConscriptHunts {
         if (after == before) {
             return;
         }
-        tag.putInt(NOTORIETY, after);
-        String key = after > before ? "notoriety_up" : "notoriety_down";
-        player.displayClientMessage(Component.translatable("message." + Sanguinaire.MOD_ID + "." + key, stars(after))
-                .withStyle(after > before ? ChatFormatting.RED : ChatFormatting.GRAY), true);
+        tag.putInt(NOTORIETY, after); // internal only: the player is never told
     }
 
     /** Marks a player as hunted (permanent), with the advancement and a horn only they hear. */
@@ -167,8 +155,6 @@ public final class ConscriptHunts {
         tag.putInt(CALM, 0);
         tag.putInt(HUNT_TIMER, huntInterval(player));
         ModAdvancements.grant(player, CRIMES_AGAINST_NATURE);
-        player.sendSystemMessage(Component.translatable("message." + Sanguinaire.MOD_ID + ".hunted_start")
-                .withStyle(ChatFormatting.DARK_RED, ChatFormatting.ITALIC));
         player.connection.send(new ClientboundSoundPacket(SoundEvents.RAID_HORN, SoundSource.HOSTILE,
                 player.getX(), player.getY(), player.getZ(), 64.0F, 1.0F, player.getRandom().nextLong()));
     }
@@ -200,17 +186,6 @@ public final class ConscriptHunts {
 
     private static int squadSize(Player player) {
         return 2 + getNotoriety(player) * 4 / 5;
-    }
-
-    /** Ordinary players are warned at most once every 30 seconds, whichever Conscript warns them. */
-    static boolean tryWarn(ServerPlayer player) {
-        long now = player.level().getGameTime();
-        Long last = LAST_WARNING.get(player.getUUID());
-        if (last != null && now - last < WARN_COOLDOWN) {
-            return false;
-        }
-        LAST_WARNING.put(player.getUUID(), now);
-        return true;
     }
 
     static void onSquadGaveUp(ServerPlayer player, int squadId) {
@@ -543,6 +518,11 @@ public final class ConscriptHunts {
 
     @SubscribeEvent
     public static void onHurt(LivingHurtEvent event) {
+        // Conscript crossbow bolts always hit for a flat amount.
+        if (event.getSource().getDirectEntity() != null
+                && event.getSource().getDirectEntity().getPersistentData().getBoolean(ConscriptEntity.BOLT_TAG)) {
+            event.setAmount(ConscriptEntity.CROSSBOW_DAMAGE);
+        }
         if (event.getEntity() instanceof Donkey donkey && donkey.getPersistentData().getBoolean(CARAVAN_TAG) && !donkey.isTamed()
                 && event.getSource().getEntity() instanceof Player player) {
             angerCaravan(donkey, player);

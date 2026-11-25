@@ -82,8 +82,14 @@ public class ConscriptEntity extends AbstractIllager implements CrossbowAttackMo
     private static final double WARN_RANGE = 9.0D;
     private static final double ZOMBIE_RANGE = 16.0D;
     private static final double ALERT_RANGE = 32.0D;
-    /** Damage of a hit, whatever weapon is held (the axe's own bonus is not added on top). */
-    public static final double ATTACK_DAMAGE = 8.0D;
+    /** Damage of a melee hit, whatever weapon is held (the axe's own bonus is not added on top). */
+    public static final double ATTACK_DAMAGE = 10.0D;
+    /** Damage of a crossbow bolt (applied in {@link ConscriptHunts#onHurt}). */
+    public static final float CROSSBOW_DAMAGE = 8.0F;
+    /** Persistent-data tag marking a bolt shot by a Conscript. */
+    public static final String BOLT_TAG = Sanguinaire.MOD_ID + ":conscript_bolt";
+    /** Same as a vindicator. */
+    public static final double MOVE_SPEED = 0.35D;
     private static final int NULLIFY_COOLDOWN = 30 * 20;
     private static final double NULLIFY_RANGE = 12.0D;
     private static final int FIRE_RES_COOLDOWN = 60 * 20;
@@ -91,6 +97,7 @@ public class ConscriptEntity extends AbstractIllager implements CrossbowAttackMo
     private static final float HEAL_AMOUNT = 15.0F;
     private static final int FLEE_TICKS = 50;
     private static final int HORN_COOLDOWN = 30 * 20;
+    private static final int GRUMBLE_COOLDOWN = 60;
     private static final int ANGER_TICKS = 60 * 20;
     /** A hunting party gives up after this long without seeing its quarry. */
     public static final int GIVE_UP_TICKS = 3 * 60 * 20;
@@ -101,9 +108,9 @@ public class ConscriptEntity extends AbstractIllager implements CrossbowAttackMo
             SynchedEntityData.defineId(ConscriptEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> DRINKING =
             SynchedEntityData.defineId(ConscriptEntity.class, EntityDataSerializers.BOOLEAN);
-    private static final UUID DRINK_SLOW_ID = UUID.fromString("5CD17E52-A79A-43D3-A529-90FDE04B181E");
-    private static final AttributeModifier DRINK_SLOW =
-            new AttributeModifier(DRINK_SLOW_ID, "Drinking speed penalty", -0.25D, AttributeModifier.Operation.MULTIPLY_TOTAL);
+    private static final UUID FLEE_BOOST_ID = UUID.fromString("5CD17E52-A79A-43D3-A529-90FDE04B181E");
+    private static final AttributeModifier FLEE_BOOST =
+            new AttributeModifier(FLEE_BOOST_ID, "Fleeing to heal", 0.5D, AttributeModifier.Operation.MULTIPLY_TOTAL);
 
     private static final int DRINK_NONE = 0;
     private static final int DRINK_HEAL = 1;
@@ -120,6 +127,7 @@ public class ConscriptEntity extends AbstractIllager implements CrossbowAttackMo
     private int fireResCooldown;
     private int nullifyCooldown;
     private int hornCooldown;
+    private int grumbleCooldown;
     @Nullable
     private UUID angryAt;
     private int angerTicks;
@@ -138,6 +146,7 @@ public class ConscriptEntity extends AbstractIllager implements CrossbowAttackMo
     public ConscriptEntity(EntityType<? extends ConscriptEntity> type, Level level) {
         super(type, level);
         this.xpReward = 10;
+        setDropChance(EquipmentSlot.MAINHAND, 1.0F); // always drops its weapon, at random durability
         reassessWeaponGoal();
     }
 
@@ -146,7 +155,7 @@ public class ConscriptEntity extends AbstractIllager implements CrossbowAttackMo
                 .add(Attributes.MAX_HEALTH, 30.0D)
                 .add(Attributes.ARMOR, 5.0D)
                 .add(Attributes.ARMOR_TOUGHNESS, 8.0D)
-                .add(Attributes.MOVEMENT_SPEED, 0.22D)
+                .add(Attributes.MOVEMENT_SPEED, MOVE_SPEED)
                 .add(Attributes.KNOCKBACK_RESISTANCE, 0.10D)
                 .add(Attributes.ATTACK_DAMAGE, ATTACK_DAMAGE)
                 .add(Attributes.FOLLOW_RANGE, 64.0D);
@@ -309,6 +318,7 @@ public class ConscriptEntity extends AbstractIllager implements CrossbowAttackMo
             return;
         }
         if (hornCooldown > 0) hornCooldown--;
+        if (grumbleCooldown > 0) grumbleCooldown--;
         if (fireResCooldown > 0) fireResCooldown--;
         if (nullifyCooldown > 0) nullifyCooldown--;
         if (angerTicks > 0 && --angerTicks == 0) {
@@ -346,7 +356,7 @@ public class ConscriptEntity extends AbstractIllager implements CrossbowAttackMo
         }
     }
 
-    /** Warns ordinary players who come close, and turns the group on those who come within 4 blocks. */
+    /** Grumbles at ordinary players who come close, and turns the group on those who come within 4 blocks. */
     private void checkNearbyPlayers() {
         if (getCurrentRaid() != null) {
             return;
@@ -358,18 +368,21 @@ public class ConscriptEntity extends AbstractIllager implements CrossbowAttackMo
             double distanceSq = distanceToSqr(player);
             if (distanceSq <= PROVOKE_RANGE * PROVOKE_RANGE) {
                 angerGroupAt(player);
-                if (player instanceof ServerPlayer serverPlayer) {
-                    serverPlayer.displayClientMessage(Component.translatable("message." + Sanguinaire.MOD_ID + ".conscript_provoked")
-                            .withStyle(ChatFormatting.RED), true);
-                }
-            } else if (distanceSq <= WARN_RANGE * WARN_RANGE && player instanceof ServerPlayer serverPlayer
-                    && ConscriptHunts.tryWarn(serverPlayer)) {
+                grumble();
+            } else if (distanceSq <= WARN_RANGE * WARN_RANGE && grumbleCooldown <= 0) {
                 getLookControl().setLookAt(player);
-                serverPlayer.displayClientMessage(Component.translatable("message." + Sanguinaire.MOD_ID + ".conscript_warning")
-                        .withStyle(ChatFormatting.GOLD), true);
-                playSound(SoundEvents.PILLAGER_AMBIENT, 1.0F, 0.8F);
+                grumble();
             }
         }
+    }
+
+    /** Angry villager particles and a low "no" grunt: keep away. */
+    private void grumble() {
+        grumbleCooldown = GRUMBLE_COOLDOWN + random.nextInt(40);
+        if (level() instanceof ServerLevel serverLevel) {
+            serverLevel.sendParticles(ParticleTypes.ANGRY_VILLAGER, getX(), getEyeY() + 0.4D, getZ(), 3, 0.3D, 0.2D, 0.3D, 0.0D);
+        }
+        playSound(SoundEvents.VILLAGER_NO, 1.0F, 0.5F + random.nextFloat() * 0.1F);
     }
 
     // ---- Nullification Potion ----------------------------------------------------------------------------------------
@@ -429,6 +442,7 @@ public class ConscriptEntity extends AbstractIllager implements CrossbowAttackMo
         }
         if (fleeTicks > 0) {
             if (--fleeTicks == 0) {
+                setFleeBoost(false);
                 startDrinking(DRINK_HEAL);
             }
             return;
@@ -436,6 +450,7 @@ public class ConscriptEntity extends AbstractIllager implements CrossbowAttackMo
         if (!usedHealingPotion && getHealth() <= getMaxHealth() / 2.0F && isAlive()) {
             usedHealingPotion = true; // once per Conscript, ever
             fleeTicks = getTarget() != null ? FLEE_TICKS : 1;
+            setFleeBoost(getTarget() != null);
             return;
         }
         if (isOnFire() && fireResCooldown <= 0 && !hasEffect(MobEffects.FIRE_RESISTANCE)) {
@@ -452,9 +467,6 @@ public class ConscriptEntity extends AbstractIllager implements CrossbowAttackMo
         ItemStack potion = PotionUtils.setPotion(new ItemStack(Items.POTION),
                 kind == DRINK_FIRE ? Potions.FIRE_RESISTANCE : Potions.HEALING);
         setItemSlot(EquipmentSlot.MAINHAND, potion);
-        if (getAttribute(Attributes.MOVEMENT_SPEED) != null && !getAttribute(Attributes.MOVEMENT_SPEED).hasModifier(DRINK_SLOW)) {
-            getAttribute(Attributes.MOVEMENT_SPEED).addTransientModifier(DRINK_SLOW);
-        }
         level().playSound(null, getX(), getY(), getZ(), SoundEvents.WITCH_DRINK, getSoundSource(), 1.0F,
                 0.8F + random.nextFloat() * 0.4F);
     }
@@ -478,10 +490,20 @@ public class ConscriptEntity extends AbstractIllager implements CrossbowAttackMo
         drinkTicks = 0;
         setItemSlot(EquipmentSlot.MAINHAND, storedWeapon);
         storedWeapon = ItemStack.EMPTY;
-        if (getAttribute(Attributes.MOVEMENT_SPEED) != null) {
-            getAttribute(Attributes.MOVEMENT_SPEED).removeModifier(DRINK_SLOW);
-        }
         reassessWeaponGoal();
+    }
+
+    /** Runs away fast while fleeing to heal; back to normal speed once drinking. */
+    private void setFleeBoost(boolean boost) {
+        var speed = getAttribute(Attributes.MOVEMENT_SPEED);
+        if (speed == null) {
+            return;
+        }
+        if (boost && !speed.hasModifier(FLEE_BOOST)) {
+            speed.addTransientModifier(FLEE_BOOST);
+        } else if (!boost) {
+            speed.removeModifier(FLEE_BOOST);
+        }
     }
 
     @Override
@@ -494,7 +516,7 @@ public class ConscriptEntity extends AbstractIllager implements CrossbowAttackMo
 
     // ---- Weapons ---------------------------------------------------------------------------------------------------
 
-    /** The weapon's own damage bonus is ignored: every hit deals {@value #ATTACK_DAMAGE} (plus enchantments). */
+    /** The weapon's own damage bonus is ignored: every melee hit deals {@value #ATTACK_DAMAGE} (plus enchantments). */
     @Override
     public double getAttributeValue(net.minecraft.world.entity.ai.attributes.Attribute attribute) {
         double value = super.getAttributeValue(attribute);
@@ -569,6 +591,7 @@ public class ConscriptEntity extends AbstractIllager implements CrossbowAttackMo
 
     @Override
     public void shootCrossbowProjectile(LivingEntity target, ItemStack crossbow, Projectile projectile, float angle) {
+        projectile.getPersistentData().putBoolean(BOLT_TAG, true);
         shootCrossbowProjectile(this, target, projectile, angle, 1.6F);
     }
 
@@ -653,6 +676,7 @@ public class ConscriptEntity extends AbstractIllager implements CrossbowAttackMo
         super.readAdditionalSaveData(tag);
         usedHealingPotion = tag.getBoolean("UsedHealingPotion");
         fireResCooldown = tag.getInt("FireResCooldown");
+        setDropChance(EquipmentSlot.MAINHAND, 1.0F); // older Conscripts saved the vanilla chance
         if (tag.contains("HuntTarget")) {
             huntTarget = NbtUtils.loadUUID(tag.get("HuntTarget"));
             ticksSinceSighted = tag.getInt("TicksSinceSighted");
@@ -666,8 +690,13 @@ public class ConscriptEntity extends AbstractIllager implements CrossbowAttackMo
 
     // ---- Goals -----------------------------------------------------------------------------------------------------
 
-    /** Stops attacking and moving freely while drinking (the potion is in the weapon hand). */
+    /**
+     * While drinking the potion is in the weapon hand, so no attacking, but they keep moving at normal speed: away from
+     * the target while drinking the healing potion, after it while drinking Fire Resistance.
+     */
     private class BusyGoal extends Goal {
+        private int repath;
+
         BusyGoal() {
             setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
         }
@@ -679,7 +708,35 @@ public class ConscriptEntity extends AbstractIllager implements CrossbowAttackMo
 
         @Override
         public void start() {
-            getNavigation().stop();
+            repath = 0;
+        }
+
+        @Override
+        public boolean requiresUpdateEveryTick() {
+            return true;
+        }
+
+        @Override
+        public void tick() {
+            LivingEntity target = getTarget();
+            if (target == null) {
+                return; // keep whatever path they were on
+            }
+            getLookControl().setLookAt(target, 30.0F, 30.0F);
+            if (--repath > 0) {
+                return;
+            }
+            repath = 10;
+            if (drinkKind == DRINK_HEAL) {
+                Vec3 away = DefaultRandomPos.getPosAway(ConscriptEntity.this, 16, 7, target.position());
+                if (away != null) {
+                    getNavigation().moveTo(away.x, away.y, away.z, 1.0D);
+                }
+            } else if (distanceToSqr(target) > 9.0D) {
+                getNavigation().moveTo(target, 1.0D);
+            } else {
+                getNavigation().stop();
+            }
         }
     }
 
@@ -710,7 +767,7 @@ public class ConscriptEntity extends AbstractIllager implements CrossbowAttackMo
             repath = 10;
             Vec3 away = DefaultRandomPos.getPosAway(ConscriptEntity.this, 16, 7, target.position());
             if (away != null) {
-                getNavigation().moveTo(away.x, away.y, away.z, 1.35D);
+                getNavigation().moveTo(away.x, away.y, away.z, 1.2D);
             }
         }
     }
