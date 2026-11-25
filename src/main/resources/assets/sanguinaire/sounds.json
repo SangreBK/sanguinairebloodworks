@@ -2,10 +2,7 @@
   "serum_inject": {
     "subtitle": "subtitles.sanguinaire.serum_inject",
     "sounds": [
-      {
-        "name": "minecraft:entity.bee.sting",
-        "type": "event"
-      }
+      "sanguinaire:player/serum_inject"
     ]
   },
   "serum_heartbeat": {
@@ -20,19 +17,17 @@
   "transformation_crack": {
     "subtitle": "subtitles.sanguinaire.transformation_crack",
     "sounds": [
-      {
-        "name": "minecraft:block.bone_block.break",
-        "type": "event"
-      }
+      "sanguinaire:player/bones_break_1",
+      "sanguinaire:player/bones_break_2",
+      "sanguinaire:player/bones_break_3"
     ]
   },
   "transformation_burst": {
     "subtitle": "subtitles.sanguinaire.transformation_burst",
     "sounds": [
-      {
-        "name": "minecraft:entity.elder_guardian.curse",
-        "type": "event"
-      }
+      "sanguinaire:player/bones_break_1",
+      "sanguinaire:player/bones_break_2",
+      "sanguinaire:player/bones_break_3"
     ]
   },
   "goatman_swipe": {

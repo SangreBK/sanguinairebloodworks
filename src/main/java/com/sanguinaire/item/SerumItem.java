@@ -11,6 +11,7 @@ import com.sanguinaire.network.ModNetwork;
 import com.sanguinaire.player.PlayerMutationData;
 import com.sanguinaire.player.PlayerMutationProvider;
 import com.sanguinaire.registry.ModItems;
+import com.sanguinaire.registry.ModSounds;
 import net.minecraft.ChatFormatting;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
@@ -258,7 +259,7 @@ public class SerumItem extends Item {
             }
         }
         stack.shrink(1);
-        player.level().playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.BOTTLE_EMPTY, SoundSource.PLAYERS, 1.0F, 1.4F);
+        player.level().playSound(null, player.getX(), player.getY(), player.getZ(), ModSounds.SERUM_INJECT.get(), SoundSource.PLAYERS, 1.0F, 1.0F);
         injector.awardStat(Stats.ITEM_USED.get(this));
         ModNetwork.syncMutationData(player);
         ItemStack syringe = new ItemStack(ModItems.EMPTY_SYRINGE.get());

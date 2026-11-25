@@ -14,13 +14,13 @@ import net.minecraftforge.registries.RegistryObject;
 public final class ModSounds {
     public static final DeferredRegister<SoundEvent> SOUNDS = DeferredRegister.create(ForgeRegistries.SOUND_EVENTS, Sanguinaire.MOD_ID);
 
-    /** The needle going in when a transformation serum is used. */
+    /** The needle going in when any serum is injected, into yourself or another player (Nico's recording). */
     public static final RegistryObject<SoundEvent> SERUM_INJECT = register("serum_inject");
     /** The heart racing as the serum spreads (played several times, faster and higher each time). */
     public static final RegistryObject<SoundEvent> SERUM_HEARTBEAT = register("serum_heartbeat");
-    /** Bones cracking and shifting just before the change. */
+    /** Bones cracking and shifting just before the change (Nico's three bone-break recordings, picked at random). */
     public static final RegistryObject<SoundEvent> TRANSFORMATION_CRACK = register("transformation_crack");
-    /** The moment the body gives way and the transformation completes. */
+    /** The moment the body gives way and the transformation completes (the same bone breaks, deeper and louder). */
     public static final RegistryObject<SoundEvent> TRANSFORMATION_BURST = register("transformation_burst");
 
     /** A Goatman's claws landing: a heavy, low swipe. */

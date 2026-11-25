@@ -116,7 +116,7 @@ public final class TransformationSequence {
         }
         for (int crack : CRACK_TICKS) {
             if (crack == t) {
-                play(player, ModSounds.TRANSFORMATION_CRACK.get(), 1.0F, 0.5F + player.getRandom().nextFloat() * 0.3F);
+                play(player, ModSounds.TRANSFORMATION_CRACK.get(), 1.0F, 0.9F + player.getRandom().nextFloat() * 0.2F);
             }
         }
         if (t >= BLEED_START_TICKS && t % 2 == 0 && player.level() instanceof ServerLevel level) {
@@ -134,7 +134,7 @@ public final class TransformationSequence {
         if (!TransformationManager.tryStart(player, pending.type, pending.blood)) {
             return;
         }
-        play(player, ModSounds.TRANSFORMATION_BURST.get(), 1.0F, 1.0F);
+        play(player, ModSounds.TRANSFORMATION_BURST.get(), 1.2F, 0.85F); // a deeper, louder final break
         if (player.level() instanceof ServerLevel level) {
             double x = player.getX();
             double y = player.getY(0.5D);
