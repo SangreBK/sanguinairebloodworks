@@ -1,18 +1,33 @@
 {
   "variants": {
-    "facing=north": {
+    "facing=north,has_result=true": {
       "model": "sanguinaire:block/sanguine_alembic"
     },
-    "facing=east": {
+    "facing=north,has_result=false": {
+      "model": "sanguinaire:block/sanguine_alembic_empty"
+    },
+    "facing=east,has_result=true": {
       "model": "sanguinaire:block/sanguine_alembic",
       "y": 90
     },
-    "facing=south": {
+    "facing=east,has_result=false": {
+      "model": "sanguinaire:block/sanguine_alembic_empty",
+      "y": 90
+    },
+    "facing=south,has_result=true": {
       "model": "sanguinaire:block/sanguine_alembic",
       "y": 180
     },
-    "facing=west": {
+    "facing=south,has_result=false": {
+      "model": "sanguinaire:block/sanguine_alembic_empty",
+      "y": 180
+    },
+    "facing=west,has_result=true": {
       "model": "sanguinaire:block/sanguine_alembic",
+      "y": 270
+    },
+    "facing=west,has_result=false": {
+      "model": "sanguinaire:block/sanguine_alembic_empty",
       "y": 270
     }
   }

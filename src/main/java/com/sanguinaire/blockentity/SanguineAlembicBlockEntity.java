@@ -134,6 +134,9 @@ public class SanguineAlembicBlockEntity extends MachineBlockEntity {
 
     public static void serverTick(Level level, BlockPos pos, BlockState state, SanguineAlembicBlockEntity alembic) {
         alembic.tick(level);
+        // The syringe on the model only appears once the altered sample is waiting in the result slot.
+        com.sanguinaire.block.MachineBlock.syncResultState(level, pos, level.getBlockState(pos),
+                !alembic.inventory.getStackInSlot(SLOT_RESULT).isEmpty());
     }
 
     private void tick(Level level) {

@@ -7,13 +7,22 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.StateDefinition;
 import org.jetbrains.annotations.Nullable;
 
 /** Sanguine Alembic: binds a potion's effect to a Blood Sample. */
 public class SanguineAlembicBlock extends MachineBlock {
     public SanguineAlembicBlock(Properties properties) {
         super(properties);
+        registerDefaultState(defaultBlockState().setValue(HAS_RESULT, false));
+    }
+
+    @Override
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+        super.createBlockStateDefinition(builder);
+        builder.add(HAS_RESULT); // shows the syringe once there's a finished product
     }
 
     @Override

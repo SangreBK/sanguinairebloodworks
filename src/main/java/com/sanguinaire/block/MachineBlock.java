@@ -18,6 +18,7 @@ import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraftforge.network.NetworkHooks;
@@ -28,6 +29,11 @@ import net.minecraftforge.network.NetworkHooks;
  */
 public abstract class MachineBlock extends BaseEntityBlock {
     public static final DirectionProperty FACING = HorizontalDirectionalBlock.FACING;
+    /**
+     * Used by the Alembic and Synthesizer only (they add it to their own state definition): true while a finished
+     * product sits in the result slot, which shows the syringe part of their model.
+     */
+    public static final BooleanProperty HAS_RESULT = BooleanProperty.create("has_result");
 
     protected MachineBlock(Properties properties) {
         super(properties);
@@ -54,6 +60,13 @@ public abstract class MachineBlock extends BaseEntityBlock {
     @SuppressWarnings("deprecation")
     public BlockState mirror(BlockState state, Mirror mirror) {
         return state.rotate(mirror.getRotation(state.getValue(FACING)));
+    }
+
+    /** Keeps {@link #HAS_RESULT} in step with the result slot. Server only; cheap when nothing changed. */
+    public static void syncResultState(Level level, BlockPos pos, BlockState state, boolean hasResult) {
+        if (state.hasProperty(HAS_RESULT) && state.getValue(HAS_RESULT) != hasResult) {
+            level.setBlock(pos, state.setValue(HAS_RESULT, hasResult), Block.UPDATE_CLIENTS);
+        }
     }
 
     @Override

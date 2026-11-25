@@ -168,6 +168,9 @@ public class SerumSynthesizerBlockEntity extends MachineBlockEntity {
 
     public static void serverTick(Level level, BlockPos pos, BlockState state, SerumSynthesizerBlockEntity synthesizer) {
         synthesizer.tick(level);
+        // The syringe on the model only appears once a finished serum is waiting (not an empty syringe).
+        com.sanguinaire.block.MachineBlock.syncResultState(level, pos, level.getBlockState(pos),
+                synthesizer.inventory.getStackInSlot(SLOT_RESULT).is(ModItems.SERUM.get()));
     }
 
     private void tick(Level level) {

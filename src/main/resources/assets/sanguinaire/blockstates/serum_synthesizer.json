@@ -1,18 +1,33 @@
 {
   "variants": {
-    "facing=north": {
+    "facing=north,has_result=true": {
       "model": "sanguinaire:block/serum_synthesizer"
     },
-    "facing=east": {
+    "facing=north,has_result=false": {
+      "model": "sanguinaire:block/serum_synthesizer_empty"
+    },
+    "facing=east,has_result=true": {
       "model": "sanguinaire:block/serum_synthesizer",
       "y": 90
     },
-    "facing=south": {
+    "facing=east,has_result=false": {
+      "model": "sanguinaire:block/serum_synthesizer_empty",
+      "y": 90
+    },
+    "facing=south,has_result=true": {
       "model": "sanguinaire:block/serum_synthesizer",
       "y": 180
     },
-    "facing=west": {
+    "facing=south,has_result=false": {
+      "model": "sanguinaire:block/serum_synthesizer_empty",
+      "y": 180
+    },
+    "facing=west,has_result=true": {
       "model": "sanguinaire:block/serum_synthesizer",
+      "y": 270
+    },
+    "facing=west,has_result=false": {
+      "model": "sanguinaire:block/serum_synthesizer_empty",
       "y": 270
     }
   }
