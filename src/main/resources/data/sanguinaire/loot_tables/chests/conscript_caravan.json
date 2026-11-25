@@ -1,0 +1,30 @@
+{
+  "type": "minecraft:chest",
+  "pools": [
+    {
+      "rolls": { "type": "minecraft:uniform", "min": 4, "max": 7 },
+      "entries": [
+        { "type": "minecraft:item", "name": "minecraft:bread", "weight": 15,
+          "functions": [{ "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 2, "max": 6 } }] },
+        { "type": "minecraft:item", "name": "minecraft:cooked_mutton", "weight": 8,
+          "functions": [{ "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 1, "max": 4 } }] },
+        { "type": "minecraft:item", "name": "minecraft:arrow", "weight": 10,
+          "functions": [{ "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 4, "max": 16 } }] },
+        { "type": "minecraft:item", "name": "minecraft:emerald", "weight": 10,
+          "functions": [{ "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 1, "max": 4 } }] },
+        { "type": "minecraft:item", "name": "minecraft:iron_ingot", "weight": 8,
+          "functions": [{ "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 1, "max": 3 } }] },
+        { "type": "minecraft:item", "name": "minecraft:leather", "weight": 8,
+          "functions": [{ "function": "minecraft:set_count", "count": { "type": "minecraft:uniform", "min": 1, "max": 3 } }] },
+        { "type": "minecraft:item", "name": "minecraft:potion", "weight": 6,
+          "functions": [{ "function": "minecraft:set_nbt", "tag": "{Potion:\"minecraft:healing\"}" }] },
+        { "type": "minecraft:item", "name": "minecraft:potion", "weight": 4,
+          "functions": [{ "function": "minecraft:set_nbt", "tag": "{Potion:\"minecraft:fire_resistance\"}" }] },
+        { "type": "minecraft:item", "name": "sanguinaire:nullification_potion", "weight": 4 },
+        { "type": "minecraft:item", "name": "minecraft:goat_horn", "weight": 1,
+          "functions": [{ "function": "minecraft:set_instrument", "options": "#minecraft:regular_goat_horns" }] },
+        { "type": "minecraft:item", "name": "sanguinaire:torn_page", "weight": 1 }
+      ]
+    }
+  ]
+}

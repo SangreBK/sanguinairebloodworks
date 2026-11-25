@@ -1,0 +1,23 @@
+{
+  "parent": "sanguinaire:root",
+  "display": {
+    "icon": {
+      "item": "minecraft:goat_horn"
+    },
+    "title": {
+      "translate": "advancements.sanguinaire.crimes_against_nature.title"
+    },
+    "description": {
+      "translate": "advancements.sanguinaire.crimes_against_nature.description"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}
