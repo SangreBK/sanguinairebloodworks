@@ -338,7 +338,7 @@
   "journal.sanguinaire.hunt.conscripts.disguise_heading": "El olor de un aldeano",
   "journal.sanguinaire.hunt.conscripts.disguise": "Hay una forma a través de la cual no pueden ver. Con la carne de un aldeano, mi olor se pierde entre el de la gente común, demasiado confuso para que puedan distinguirlo. Mientras estoy en esa forma me toman por un aldeano más: no me atacan, no envían ninguna partida de caza tras de mí, y cualquier partida que ya siga mi rastro lo pierde. Sin embargo, durante una invasión atacan a los aldeanos de todos modos, con disfraz o sin él.",
   "journal.sanguinaire.hunt.conscripts.escape_heading": "Cómo escapar",
-  "journal.sanguinaire.hunt.conscripts.escape": "Una partida de caza sigue mi rastro, no cada uno de mis pasos. Si rompo su línea de visión y me mantengo oculto unos minutos, pierden el rastro y se rinden. Agacharme y la invisibilidad hacen que me cueste más que me vean. Morir hace que se retire la partida enviada tras de mí.",
+  "journal.sanguinaire.hunt.conscripts.escape": "Una partida de caza sigue mi rastro, no cada uno de mis pasos. Si rompo su línea de visión y me mantengo oculto unos minutos, pierden el rastro y se rinden. Agacharme y la invisibilidad hacen que me cueste más que me vean. Morir hace que se retire la partida enviada tras de mí. Jamás ponen un pie en el Nether.",
   "journal.sanguinaire.hunt.conscripts.undead_heading": "Los caídos",
   "journal.sanguinaire.hunt.conscripts.undead": "Un conscripto que muere a manos de un no muerto se levanta como uno de ellos: un conscripto zombificado, sin más voluntad que la de un zombi común, que pelea con las manos desnudas. Sus antiguos compañeros no lo abandonan. Si lo encuentran fuera de combate, le arrojan una poción de debilidad y, una vez debilitado, le dan de comer una manzana dorada. Tras unos diez segundos de temblores, vuelve a ser un conscripto, con su vieja arma en la mano.",
   "journal.sanguinaire.hunt.notoriety.title": "Notoriedad",
@@ -346,7 +346,7 @@
   "journal.sanguinaire.hunt.notoriety.rises_heading": "Qué la aumenta",
   "journal.sanguinaire.hunt.notoriety.rises": "Cada transformación que sufro mientras me persiguen aumenta mi notoriedad, igual que cada pocos conscriptos que abato.",
   "journal.sanguinaire.hunt.notoriety.falls_heading": "Qué la reduce",
-  "journal.sanguinaire.hunt.notoriety.falls": "Pasar desapercibido. Si pasa un buen rato sin que me transforme ni mate a sus soldados, mi notoriedad se desvanece poco a poco. Tomar la forma de un aldeano la borra de golpe, tan confuso les resulta mi olor. Nunca lo bastante como para que dejen de perseguirme del todo.",
+  "journal.sanguinaire.hunt.notoriety.falls": "Pasar desapercibido. Si pasa un buen rato sin que me transforme ni mate a sus soldados, mi notoriedad se desvanece poco a poco. Tomar la forma de un aldeano la borra de golpe, tan confuso les resulta mi olor. Cruzar a otro mundo, sea el Nether o el End, también la borra; allí no pueden seguirme, aunque su cacería se reanuda en cuanto regreso. Aun así, por baja que sea, nunca dejarán de perseguirme del todo.",
   "journal.sanguinaire.hunt.notoriety.effect_heading": "Qué significa",
   "journal.sanguinaire.hunt.notoriety.effect": "Cuanto más notorio soy, más grandes son las partidas de caza que envían tras de mí y menos tiempo pasa entre una y otra. Un cirujano discreto quizá solo se cruce con un par de soldados de vez en cuando; uno notorio encontrará escuadrones enteros siguiéndole el rastro."
 }

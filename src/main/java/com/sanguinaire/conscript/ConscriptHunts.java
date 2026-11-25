@@ -315,6 +315,9 @@ public final class ConscriptHunts {
                 || !isHunted(player)) {
             return;
         }
+        if (player.level().dimension() != Level.OVERWORLD) {
+            return; // the hunt (and its timer) waits until they come back
+        }
         CompoundTag tag = data(player);
         int calm = tag.getInt(CALM) + 20;
         if (calm >= CALM_DECAY_TICKS) {
@@ -479,6 +482,9 @@ public final class ConscriptHunts {
 
     /** 5 Conscripts (a patrol leader and 4) and 2 donkeys whose chests hold the caravan's supplies. */
     public static void spawnCaravan(ServerLevel level, BlockPos center) {
+        if (level.dimension() == Level.NETHER) {
+            return; // Conscripts never set foot in the Nether
+        }
         RandomSource random = level.random;
         for (int i = 0; i < 5; i++) {
             BlockPos pos = surfaceAt(level, center.getX() + random.nextInt(9) - 4, center.getZ() + random.nextInt(9) - 4);
@@ -537,6 +543,11 @@ public final class ConscriptHunts {
             return;
         }
         Entity entity = event.getEntity();
+        if (entity instanceof ConscriptEntity && event.getLevel().dimension() == Level.NETHER
+                && !event.loadedFromDisk()) {
+            event.setCanceled(true); // no Conscripts in the Nether, however they'd get there
+            return;
+        }
         if (entity instanceof Donkey donkey && donkey.getPersistentData().getBoolean(CARAVAN_TAG) && !donkey.isTamed()) {
             donkey.goalSelector.addGoal(1, new CaravanDonkeyGoal(donkey));
         }
@@ -550,6 +561,17 @@ public final class ConscriptHunts {
             if (REINFORCED_WAVES.add(raid.getId() + ":" + raider.getWave())) {
                 RAID_QUEUE.add(new PendingReinforcement(serverLevel, raid, raider.getWave(), raider.blockPosition()));
             }
+        }
+    }
+
+    /** Crossing into another dimension shakes them off: notoriety back to 0, and any warned party is cancelled. */
+    @SubscribeEvent
+    public static void onChangeDimension(PlayerEvent.PlayerChangedDimensionEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player && isHunted(player)) {
+            CompoundTag tag = data(player);
+            tag.putInt(NOTORIETY, 0);
+            tag.putInt(CALM, 0);
+            tag.putInt(PENDING, 0);
         }
     }
 

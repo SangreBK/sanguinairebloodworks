@@ -190,7 +190,8 @@ public class ConscriptEntity extends AbstractIllager implements CrossbowAttackMo
         goalSelector.addGoal(0, new FloatGoal(this));
         goalSelector.addGoal(1, new BusyGoal());
         goalSelector.addGoal(2, new FleeToHealGoal());
-        goalSelector.addGoal(4, new CureComradeGoal());
+        // Priority 2: above the patrol/raid wandering goals (priority 3-4), which would otherwise block it forever.
+        goalSelector.addGoal(2, new CureComradeGoal());
         goalSelector.addGoal(5, new TrackQuarryGoal());
         goalSelector.addGoal(8, new RandomStrollGoal(this, 0.6D));
         goalSelector.addGoal(9, new LookAtPlayerGoal(this, Player.class, 15.0F, 1.0F));
@@ -907,6 +908,7 @@ public class ConscriptEntity extends AbstractIllager implements CrossbowAttackMo
         private int throwCooldown;
         private int repath;
         private int timeout;
+        private int searchDelay;
 
         CureComradeGoal() {
             setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
@@ -918,9 +920,11 @@ public class ConscriptEntity extends AbstractIllager implements CrossbowAttackMo
 
         @Override
         public boolean canUse() {
-            if (busy() || tickCount % 10 != 0) {
+            // Own countdown: canUse() is only polled every other tick, so a tickCount % 10 check could never pass.
+            if (busy() || --searchDelay > 0) {
                 return false;
             }
+            searchDelay = 10;
             patient = null;
             double best = Double.MAX_VALUE;
             for (ZombifiedConscript zombie : level().getEntitiesOfClass(ZombifiedConscript.class, getBoundingBox().inflate(SEARCH_RANGE))) {

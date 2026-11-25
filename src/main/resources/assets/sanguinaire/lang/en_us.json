@@ -338,7 +338,7 @@
   "journal.sanguinaire.hunt.conscripts.disguise_heading": "A villager's scent",
   "journal.sanguinaire.hunt.conscripts.disguise": "There is one shape they cannot see through. Wearing a villager's flesh, my scent is lost among the common folk, too muddled for them to pick out. While in that form they take me for just another villager: they will not attack me, they send no hunting party after me, and any party already on my trail loses it. During a raid, however, they cut down villagers anyway, disguise or not.",
   "journal.sanguinaire.hunt.conscripts.escape_heading": "Escaping them",
-  "journal.sanguinaire.hunt.conscripts.escape": "A hunting party follows my trail, not my every step. If I break their line of sight and keep out of view for a few minutes, they lose the trail and give up. Sneaking and invisibility make me harder to spot. Dying calls off the party sent after me.",
+  "journal.sanguinaire.hunt.conscripts.escape": "A hunting party follows my trail, not my every step. If I break their line of sight and keep out of view for a few minutes, they lose the trail and give up. Sneaking and invisibility make me harder to spot. Dying calls off the party sent after me. They never set foot in the Nether.",
   "journal.sanguinaire.hunt.conscripts.undead_heading": "The fallen",
   "journal.sanguinaire.hunt.conscripts.undead": "A Conscript slain by the undead rises as one of them: a Zombified Conscript, with no more will than a common zombie, fighting bare-handed. Its old comrades do not abandon it. If they find it while out of combat, they splash it with a potion of Weakness and, once it is weakened, feed it a golden apple. After some ten seconds of shaking, it is a Conscript again, its old weapon back in hand.",
   "journal.sanguinaire.hunt.notoriety.title": "Notoriety",
@@ -346,7 +346,7 @@
   "journal.sanguinaire.hunt.notoriety.rises_heading": "What raises it",
   "journal.sanguinaire.hunt.notoriety.rises": "Every transformation I undergo while hunted adds to my notoriety, and so does every few Conscripts I cut down.",
   "journal.sanguinaire.hunt.notoriety.falls_heading": "What lowers it",
-  "journal.sanguinaire.hunt.notoriety.falls": "Lying low. If a long while passes without me transforming or killing their soldiers, my notoriety slowly fades. Taking the shape of a villager wipes it clean at once, so muddled is my scent to them. It never fades enough for them to stop hunting me altogether.",
+  "journal.sanguinaire.hunt.notoriety.falls": "Lying low. If a long while passes without me transforming or killing their soldiers, my notoriety slowly fades. Taking the shape of a villager wipes it clean at once, so muddled is my scent to them. Crossing into another world, be it the Nether or the End, wipes it clean as well; they cannot follow me there, though their hunt resumes the moment I return. Yet however low it falls, they will never stop hunting me altogether.",
   "journal.sanguinaire.hunt.notoriety.effect_heading": "What it means",
   "journal.sanguinaire.hunt.notoriety.effect": "The more notorious I am, the larger the hunting parties sent after me and the less time passes between them. A quiet surgeon may only meet a pair of soldiers now and then; a notorious one will find whole squads on their trail."
 }
