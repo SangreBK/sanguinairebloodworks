@@ -169,7 +169,7 @@ public class ConscriptEntity extends AbstractIllager implements CrossbowAttackMo
     public static AttributeSupplier.Builder createAttributes() {
         return Monster.createMonsterAttributes()
                 .add(Attributes.MAX_HEALTH, 30.0D)
-                .add(Attributes.ARMOR, 5.0D)
+                .add(Attributes.ARMOR, 8.0D)
                 .add(Attributes.ARMOR_TOUGHNESS, 8.0D)
                 .add(Attributes.MOVEMENT_SPEED, MOVE_SPEED)
                 .add(Attributes.KNOCKBACK_RESISTANCE, 0.10D)
