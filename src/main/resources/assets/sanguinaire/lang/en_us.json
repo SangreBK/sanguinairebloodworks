@@ -146,7 +146,7 @@
   "journal.sanguinaire.mutation.goat": "Sure-footed as any mountain dweller. No fall, however great, can hurt you.",
   "journal.sanguinaire.mutation.goat.ability": "You lower your horns and charge 5 blocks forward, butting everything in your way for 2 damage. Recovery: 8 seconds.",
   "journal.sanguinaire.weakened.title": "Weakened Hearts",
-  "journal.sanguinaire.weakened.intro": "The body does not forgive what we do to it. Each time a transformation runs its course and foreign flesh is cast out, it leaves something behind: a heart gone pale and sickly purple, a Weakened Heart.",
+  "journal.sanguinaire.weakened.intro": "The body does not forgive what we do to it. Each time a transformation runs its course and foreign flesh is cast out, it leaves something behind: a heart gone sickly green, a Weakened Heart.",
   "journal.sanguinaire.weakened.gained_heading": "How they are gained",
   "journal.sanguinaire.weakened.gained": "Every transformation serum costs half a heart once its effects end, even if death ends it early. The toll accumulates without limit; a reckless surgeon can turn their entire life into Weakened Hearts. Utility serums such as Tainted Blood and Physical Boost exact no such price.",
   "journal.sanguinaire.weakened.effects_heading": "What they do",
