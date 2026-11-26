@@ -1,0 +1,24 @@
+{
+  "parent": "sanguinaire:root",
+  "display": {
+    "icon": {
+      "item": "sanguinaire:serum",
+      "nbt": "{Utility:\"revitalizing\"}"
+    },
+    "title": {
+      "translate": "advancements.sanguinaire.second_wind.title"
+    },
+    "description": {
+      "translate": "advancements.sanguinaire.second_wind.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}
