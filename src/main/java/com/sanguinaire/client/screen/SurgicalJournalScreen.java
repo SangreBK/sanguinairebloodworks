@@ -27,6 +27,9 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.item.crafting.Recipe;
+import net.minecraft.world.item.crafting.ShapedRecipe;
 import net.minecraft.world.level.block.Block;
 import net.minecraftforge.registries.RegistryObject;
 import org.jetbrains.annotations.Nullable;
@@ -42,10 +45,12 @@ import java.util.function.Consumer;
  * The Research Journal: a two-page Victorian research book. The left page is the index, the right page shows the
  * selected entry, with a scrollbar showing how far through a long entry the reader is.
  * <p>
- * The index starts with the general entries (the Surgical Saw with every mob's drop table, Weakened Hearts, and the
- * three workstations: Research Station, Serum Synthesizer and Sanguine Alembic),
- * followed by collapsible categories, each sorted alphabetically:
+ * The index starts with the general entries (the Surgical Saw with its recipe and every mob's drop table, and Weakened
+ * Hearts), followed by collapsible categories, each sorted alphabetically:
  * <ul>
+ *     <li><b>Functional Blocks</b>: the Research Station, Serum Synthesizer and Sanguine Alembic, each with its block,
+ *     crafting recipe, use and automation.</li>
+ *     <li><b>Equipment</b>: the Serum Briefcase and the Vile Cane, each with its picture and crafting recipe.</li>
  *     <li><b>Enhancing Serums</b>: utility serums, with full formulas once the player has read their Torn Page.</li>
  *     <li><b>Transformation Serums</b>: transformations, once one of their ingredients has been researched by the
  *     <em>local player</em> (unresearched ingredients stay hidden, "?"), or, for the original creatures, once their
@@ -75,6 +80,11 @@ public class SurgicalJournalScreen extends Screen {
     private static final int INDEX_TOP = 44;
     private static final int INDEX_ROW_HEIGHT = 11;
     private static final int ICON_ROW_HEIGHT = 22;
+    /** A crafting recipe: a 3×3 grid of 20 px slots, 19 px apart, plus a little margin. */
+    private static final int RECIPE_SLOT_STRIDE = 19;
+    private static final int RECIPE_HEIGHT = RECIPE_SLOT_STRIDE * 3 + 5;
+    /** How long each item of a multi-item ingredient (a tag) is shown before the next. */
+    private static final long INGREDIENT_CYCLE_MS = 1000L;
     private static final int SCROLLBAR_X = 294;
     private static final int SCROLLBAR_WIDTH = 6;
     private static final int MIN_THUMB_HEIGHT = 12;
@@ -89,10 +99,18 @@ public class SurgicalJournalScreen extends Screen {
     private static final int THUMB_LIGHT = 0xFFA83A2A;
     private static final int THUMB_DARK = 0xFF4A0A0A;
 
-    /** One rendered line of an entry: text, or a row of ingredient icons (null stacks are unknown ingredients). */
-    private record Line(@Nullable FormattedCharSequence text, int color, @Nullable List<ItemStack> icons) {
+    /**
+     * One rendered line of an entry: text, a row of ingredient icons (null stacks are unknown ingredients), or a
+     * crafting recipe (looked up by id in the client's recipe manager, so it always matches the real recipe).
+     */
+    private record Line(@Nullable FormattedCharSequence text, int color, @Nullable List<ItemStack> icons,
+                        @Nullable ResourceLocation recipe) {
+        Line(@Nullable FormattedCharSequence text, int color, @Nullable List<ItemStack> icons) {
+            this(text, color, icons, null);
+        }
+
         int height(int fontHeight) {
-            return icons != null ? ICON_ROW_HEIGHT : fontHeight + 1;
+            return recipe != null ? RECIPE_HEIGHT : icons != null ? ICON_ROW_HEIGHT : fontHeight + 1;
         }
     }
 
@@ -102,6 +120,8 @@ public class SurgicalJournalScreen extends Screen {
 
     /** A collapsible group of entries on the index page. */
     private enum Category {
+        FUNCTIONAL_BLOCKS("category.functional_blocks"),
+        EQUIPMENT("category.equipment"),
         ENHANCING("category.enhancing"),
         TRANSFORMATIONS("category.transformations"),
         BLOOD_TYPES("category.blood_types"),
@@ -159,10 +179,15 @@ public class SurgicalJournalScreen extends Screen {
         categories.clear();
         general.add(new Entry(SAW_KEY, Component.translatable(PREFIX + "saw.title"), this::buildSawEntry));
         general.add(new Entry("weakened_hearts", Component.translatable(PREFIX + "weakened.title"), this::buildWeakenedHeartsEntry));
-        addBlockEntry(ModBlocks.RESEARCH_STATION.get(), "research_station");
-        addBlockEntry(ModBlocks.SERUM_SYNTHESIZER.get(), "serum_synthesizer");
-        addBlockEntry(ModBlocks.SANGUINE_ALEMBIC.get(), "sanguine_alembic");
         LocalPlayer player = Minecraft.getInstance().player;
+
+        List<Entry> blocks = new ArrayList<>();
+        addBlockEntry(blocks, ModBlocks.RESEARCH_STATION.get(), "research_station");
+        addBlockEntry(blocks, ModBlocks.SERUM_SYNTHESIZER.get(), "serum_synthesizer");
+        addBlockEntry(blocks, ModBlocks.SANGUINE_ALEMBIC.get(), "sanguine_alembic");
+        List<Entry> equipment = new ArrayList<>();
+        addEquipmentEntry(equipment, ModItems.SERUM_BRIEFCASE.get(), "serum_briefcase", "storage");
+        addEquipmentEntry(equipment, ModItems.VILE_CANE.get(), "vile_cane", "cane_mode", "sword_mode", "care");
 
         List<Entry> enhancing = new ArrayList<>();
         for (UtilitySerum serum : UtilitySerum.values()) {
@@ -188,6 +213,10 @@ public class SurgicalJournalScreen extends Screen {
         }
         // Alphabetical by the name the reader actually sees (works in any language).
         Comparator<Entry> alphabetical = Comparator.comparing(entry -> entry.label().getString(), String.CASE_INSENSITIVE_ORDER);
+        blocks.sort(alphabetical);
+        equipment.sort(alphabetical);
+        categories.put(Category.FUNCTIONAL_BLOCKS, blocks);
+        categories.put(Category.EQUIPMENT, equipment);
         enhancing.sort(alphabetical);
         transformations.sort(alphabetical);
         bloodTypes.sort(alphabetical);
@@ -205,17 +234,52 @@ public class SurgicalJournalScreen extends Screen {
         researchedCount = player == null ? 0 : ResearchManager.getResearchedCount(player);
     }
 
-    /** An always-present entry for one of the mod's workstations: what it does, and how to automate it. */
-    private void addBlockEntry(Block block, String id) {
+    /** An always-present entry for one of the mod's workstations: what it does, its recipe, and how to automate it. */
+    private void addBlockEntry(List<Entry> into, Block block, String id) {
         Component name = block.getName();
-        general.add(new Entry("block:" + id, name, lines -> {
+        into.add(new Entry("block:" + id, name, lines -> {
             addTitle(lines, name);
             lines.add(new Line(null, INK, List.of(new ItemStack(block))));
+            addRecipe(lines, id);
             addWrapped(lines, Component.translatable(PREFIX + "block." + id + ".text"), INK);
             addSpacer(lines);
             addHeading(lines, "block.automation_heading");
             addWrapped(lines, Component.translatable(PREFIX + "block." + id + ".automation"), INK);
         }));
+    }
+
+    /** An always-present entry for a piece of equipment: picture, recipe, intro, then one headed section per part. */
+    private void addEquipmentEntry(List<Entry> into, Item item, String id, String... sections) {
+        Component name = new ItemStack(item).getHoverName();
+        into.add(new Entry("equipment:" + id, name, lines -> {
+            String base = "equipment." + id + ".";
+            addTitle(lines, name);
+            lines.add(new Line(null, INK, List.of(new ItemStack(item))));
+            addRecipe(lines, id);
+            addWrapped(lines, Component.translatable(PREFIX + base + "intro"), INK);
+            for (String section : sections) {
+                addSpacer(lines);
+                addHeading(lines, base + section + "_heading");
+                addWrapped(lines, Component.translatable(PREFIX + base + section), INK);
+            }
+        }));
+    }
+
+    /** The crafting recipe {@code sanguinaire:<id>}, if the client knows it (otherwise nothing is added). */
+    private void addRecipe(List<Line> lines, String id) {
+        ResourceLocation recipeId = Sanguinaire.id(id);
+        if (findRecipe(recipeId) != null) {
+            lines.add(new Line(null, INK, null, recipeId));
+        }
+    }
+
+    @Nullable
+    private static Recipe<?> findRecipe(ResourceLocation id) {
+        Minecraft minecraft = Minecraft.getInstance();
+        if (minecraft.level == null) {
+            return null;
+        }
+        return minecraft.level.getRecipeManager().byKey(id).orElse(null);
     }
 
     /** Lays out the index from the entries and which categories are open. */
@@ -293,7 +357,7 @@ public class SurgicalJournalScreen extends Screen {
 
     private void buildSawEntry(List<Line> lines) {
         addTitle(lines, Component.translatable(PREFIX + "saw.title"));
-        addSpacer(lines);
+        addRecipe(lines, "surgical_saw");
         addWrapped(lines, Component.translatable(PREFIX + "saw.text"), INK);
         addSpacer(lines);
         addHeading(lines, "saw.drops");
@@ -503,7 +567,9 @@ public class SurgicalJournalScreen extends Screen {
         for (Line line : content) {
             int height = line.height(font.lineHeight);
             if (y + height >= top && y <= bottom) {
-                if (line.icons() != null) {
+                if (line.recipe() != null) {
+                    renderRecipe(graphics, line.recipe(), x, y, mouseX, mouseY, top, bottom);
+                } else if (line.icons() != null) {
                     renderIconRow(graphics, line.icons(), x, y, mouseX, mouseY, top, bottom);
                 } else if (line.text() != null) {
                     graphics.drawString(font, line.text(), x, y, line.color(), false);
@@ -528,6 +594,67 @@ public class SurgicalJournalScreen extends Screen {
                 }
             }
             slotX += 22;
+        }
+    }
+
+    /**
+     * A crafting grid (3×3, or the recipe's own size for shaped recipes) with an inked arrow and the result,
+     * centred on the page. Ingredients that accept several items (tags) cycle through them once a second.
+     */
+    private void renderRecipe(GuiGraphics graphics, ResourceLocation id, int x, int y, int mouseX, int mouseY, int top, int bottom) {
+        Recipe<?> recipe = findRecipe(id);
+        Minecraft minecraft = Minecraft.getInstance();
+        if (recipe == null || minecraft.level == null) {
+            return;
+        }
+        int gridWidth = RECIPE_SLOT_STRIDE * 2 + 20;
+        int arrowWidth = 16;
+        int totalWidth = gridWidth + 6 + arrowWidth + 6 + 20;
+        int gridX = x + (RIGHT_PAGE_WIDTH - totalWidth) / 2;
+        int gridY = y + 2;
+        int recipeWidth = recipe instanceof ShapedRecipe shaped ? shaped.getWidth() : 3;
+        List<Ingredient> ingredients = recipe.getIngredients();
+        long cycle = System.currentTimeMillis() / INGREDIENT_CYCLE_MS;
+        for (int row = 0; row < 3; row++) {
+            for (int col = 0; col < 3; col++) {
+                int slotX = gridX + col * RECIPE_SLOT_STRIDE;
+                int slotY = gridY + row * RECIPE_SLOT_STRIDE;
+                graphics.blit(TEXTURE, slotX, slotY, 0.0F, 184.0F, 20, 20, TEXTURE_WIDTH, TEXTURE_HEIGHT);
+                int index = col < recipeWidth ? row * recipeWidth + col : -1;
+                if (index < 0 || index >= ingredients.size()) {
+                    continue;
+                }
+                ItemStack[] options = ingredients.get(index).getItems();
+                if (options.length == 0) {
+                    continue;
+                }
+                ItemStack stack = options[(int) (cycle % options.length)];
+                renderHoverableItem(graphics, stack, slotX, slotY, mouseX, mouseY, top, bottom);
+            }
+        }
+        // Inked arrow pointing at the result.
+        int arrowX = gridX + gridWidth + 6;
+        int arrowY = gridY + RECIPE_SLOT_STRIDE + 9;
+        int ink = 0xFF000000 | INK;
+        graphics.fill(arrowX, arrowY, arrowX + arrowWidth - 4, arrowY + 2, ink);
+        for (int i = 0; i < 4; i++) {
+            graphics.fill(arrowX + arrowWidth - 4 + i, arrowY - 3 + i, arrowX + arrowWidth - 3 + i, arrowY + 5 - i, ink);
+        }
+        int resultX = arrowX + arrowWidth + 6;
+        int resultY = gridY + RECIPE_SLOT_STRIDE;
+        graphics.blit(TEXTURE, resultX, resultY, 0.0F, 184.0F, 20, 20, TEXTURE_WIDTH, TEXTURE_HEIGHT);
+        ItemStack result = recipe.getResultItem(minecraft.level.registryAccess());
+        renderHoverableItem(graphics, result, resultX, resultY, mouseX, mouseY, top, bottom);
+        if (result.getCount() > 1) {
+            graphics.renderItemDecorations(font, result, resultX + 2, resultY + 2);
+        }
+    }
+
+    private void renderHoverableItem(GuiGraphics graphics, ItemStack stack, int slotX, int slotY, int mouseX, int mouseY, int top, int bottom) {
+        graphics.renderItem(stack, slotX + 2, slotY + 2);
+        if (mouseX >= slotX && mouseX < slotX + 20 && mouseY >= slotY && mouseY < slotY + 20
+                && mouseY >= top && mouseY < bottom) {
+            hoveredStack = stack;
         }
     }
 
