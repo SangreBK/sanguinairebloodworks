@@ -195,8 +195,13 @@ public final class TransformationRenderer {
         float partialTick = event.getPartialTick();
         int light = event.getPackedLight();
 
+        EntityType<? extends LivingEntity> appearance = type.getAppearance();
+        if (hidden && (appearance == EntityType.SPIDER || appearance == EntityType.CAVE_SPIDER)) {
+            // Like a real invisible spider: the body is gone but the eyes still glow (the vanilla renderer skips an
+            // invisible puppet's body and still draws its eyes layer).
+            renderPuppet(player, appearance, poseStack, buffers, partialTick, light);
+        }
         if (!hidden) {
-            EntityType<? extends LivingEntity> appearance = type.getAppearance();
             if (appearance != null) {
                 renderPuppet(player, appearance, poseStack, buffers, partialTick, light);
             } else {

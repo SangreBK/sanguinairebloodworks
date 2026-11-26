@@ -146,6 +146,7 @@ public class SerumSynthesizerBlockEntity extends MachineBlockEntity {
         return slot == SLOT_RESULT && stack.is(ModItems.SERUM.get());
     }
 
+    /** Only non-empty for a brew saved by an older version (which took the ingredients out at the start). */
     @Override
     protected List<ItemStack> getProcessingStacks() {
         return consumed;
@@ -177,16 +178,33 @@ public class SerumSynthesizerBlockEntity extends MachineBlockEntity {
         if (level.getGameTime() % PUSH_INTERVAL == 0 && inventory.getStackInSlot(SLOT_RESULT).is(ModItems.SERUM.get())) {
             pushToContainerBelow(SLOT_RESULT);
         }
+        returnLegacyConsumed(level);
         ItemStack result = inventory.getStackInSlot(SLOT_RESULT);
         boolean hasSyringe = result.is(ModItems.EMPTY_SYRINGE.get());
 
-        if (brewing.isEmpty()) {
-            tryStartBrewing(level, result, hasSyringe);
+        // Nothing is used up until the serum is finished: the recipe is checked against the slots every tick, and
+        // changing or removing an ingredient (or the blood sample) starts the brew over.
+        ItemStack match = currentRecipe();
+        if (match.isEmpty()) {
+            resetBrew();
+            setStatus(anyIngredientMissing() ? STATUS_IDLE : STATUS_INVALID);
+            return;
+        }
+        if (!brewing.isEmpty() && !ItemStack.matches(brewing, match)) {
+            resetBrew();
+        }
+        if (!result.isEmpty() && !hasSyringe) {
+            setStatus(STATUS_RESULT_OCCUPIED);
             return;
         }
         if (!hasSyringe) {
             setStatus(STATUS_NEEDS_SYRINGE); // paused, progress kept
             return;
+        }
+        if (brewing.isEmpty()) {
+            brewing = match;
+            progress = 0;
+            level.playSound(null, getBlockPos(), SoundEvents.BREWING_STAND_BREW, SoundSource.BLOCKS, 0.6F, 1.2F);
         }
         progress++;
         setStatus(STATUS_BREWING);
@@ -194,9 +212,15 @@ public class SerumSynthesizerBlockEntity extends MachineBlockEntity {
         if (progress < BREW_TICKS) {
             return;
         }
+        // Done: only now are one of each ingredient (and the blood sample, if it went in) used up.
+        for (int slot = SLOT_INGREDIENT_1; slot <= SLOT_INGREDIENT_3; slot++) {
+            inventory.extractItem(slot, 1, false);
+        }
+        if (SerumItem.getBlood(brewing) != null) {
+            inventory.extractItem(SLOT_BLOOD, 1, false);
+        }
         inventory.setStackInSlot(SLOT_RESULT, brewing.copy());
         brewing = ItemStack.EMPTY;
-        consumed.clear();
         progress = 0;
         setStatus(STATUS_IDLE);
         BlockPos pos = getBlockPos();
@@ -205,44 +229,68 @@ public class SerumSynthesizerBlockEntity extends MachineBlockEntity {
         pushToContainerBelow(SLOT_RESULT);
     }
 
-    private void tryStartBrewing(Level level, ItemStack result, boolean hasSyringe) {
+    private void resetBrew() {
+        if (!brewing.isEmpty() || progress != 0) {
+            brewing = ItemStack.EMPTY;
+            progress = 0;
+            setChanged();
+        }
+    }
+
+    private boolean anyIngredientMissing() {
+        for (int slot = SLOT_INGREDIENT_1; slot <= SLOT_INGREDIENT_3; slot++) {
+            if (inventory.getStackInSlot(slot).isEmpty()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** The serum the current slots would make (with the blood sample mixed in for transformation serums), or empty. */
+    private ItemStack currentRecipe() {
+        if (anyIngredientMissing()) {
+            return ItemStack.EMPTY;
+        }
         List<Item> ingredients = new ArrayList<>(3);
         for (int slot = SLOT_INGREDIENT_1; slot <= SLOT_INGREDIENT_3; slot++) {
-            ItemStack stack = inventory.getStackInSlot(slot);
-            if (stack.isEmpty()) {
-                setStatus(STATUS_IDLE);
-                return;
-            }
-            ingredients.add(stack.getItem());
+            ingredients.add(inventory.getStackInSlot(slot).getItem());
         }
         ItemStack match = findSerum(ingredients);
         if (match.isEmpty()) {
-            setStatus(STATUS_INVALID);
-            return;
-        }
-        if (!result.isEmpty() && !hasSyringe) {
-            setStatus(STATUS_RESULT_OCCUPIED);
-            return;
-        }
-        if (!hasSyringe) {
-            setStatus(STATUS_NEEDS_SYRINGE);
-            return;
-        }
-        for (int slot = SLOT_INGREDIENT_1; slot <= SLOT_INGREDIENT_3; slot++) {
-            consumed.add(inventory.extractItem(slot, 1, false));
+            return match;
         }
         // Blood only goes into transformation serums.
         BloodInfusion blood = BloodSampleItem.toInfusion(inventory.getStackInSlot(SLOT_BLOOD));
         if (blood != null && SerumItem.getMutation(match) != null) {
-            consumed.add(inventory.extractItem(SLOT_BLOOD, 1, false));
             SerumItem.setBlood(match, blood);
         }
-        brewing = match;
+        return match;
+    }
+
+    /**
+     * Older versions took the ingredients out when brewing started. If such a brew was saved, give the ingredients
+     * back (into their slots when they fit, otherwise on top of the machine) and let it start over.
+     */
+    private void returnLegacyConsumed(Level level) {
+        if (consumed.isEmpty()) {
+            return;
+        }
+        for (ItemStack stack : consumed) {
+            ItemStack left = stack.copy();
+            for (int slot = SLOT_INGREDIENT_1; slot <= SLOT_BLOOD && !left.isEmpty(); slot++) {
+                if (slot != SLOT_RESULT) {
+                    left = inventory.insertItem(slot, left, false);
+                }
+            }
+            if (!left.isEmpty()) {
+                BlockPos pos = getBlockPos();
+                net.minecraft.world.Containers.dropItemStack(level, pos.getX(), pos.getY() + 1, pos.getZ(), left);
+            }
+        }
+        consumed.clear();
+        brewing = ItemStack.EMPTY;
         progress = 0;
-        setStatus(STATUS_BREWING);
         setChanged();
-        BlockPos pos = getBlockPos();
-        level.playSound(null, pos, SoundEvents.BREWING_STAND_BREW, SoundSource.BLOCKS, 0.6F, 1.2F);
     }
 
     /** The serum these three ingredients make: a transformation serum or a utility serum. */

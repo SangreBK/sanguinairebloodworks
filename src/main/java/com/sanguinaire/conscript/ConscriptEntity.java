@@ -499,6 +499,9 @@ public class ConscriptEntity extends AbstractIllager implements CrossbowAttackMo
                 if (drinkTicks % 4 == 0) {
                     chew();
                 }
+            } else if (drinkTicks % 4 == 0) {
+                // Gulping it down, like a player drinking.
+                playSound(SoundEvents.GENERIC_DRINK, 0.5F, random.nextFloat() * 0.1F + 0.9F);
             }
             if (--drinkTicks <= 0) {
                 finishDrinking();
@@ -541,8 +544,6 @@ public class ConscriptEntity extends AbstractIllager implements CrossbowAttackMo
         ItemStack potion = PotionUtils.setPotion(new ItemStack(Items.POTION),
                 kind == DRINK_FIRE ? Potions.FIRE_RESISTANCE : Potions.HEALING);
         setItemSlot(EquipmentSlot.MAINHAND, potion);
-        level().playSound(null, getX(), getY(), getZ(), SoundEvents.WITCH_DRINK, getSoundSource(), 1.0F,
-                0.8F + random.nextFloat() * 0.4F);
     }
 
     private void chew() {
@@ -560,6 +561,8 @@ public class ConscriptEntity extends AbstractIllager implements CrossbowAttackMo
             restoreWeapon();
             return;
         }
+        level().playSound(null, getX(), getY(), getZ(), SoundEvents.WITCH_DRINK, getSoundSource(), 1.0F,
+                0.8F + random.nextFloat() * 0.4F); // the final swallow, as the potion takes effect
         if (drinkKind == DRINK_HEAL) {
             heal(HEAL_AMOUNT);
         } else if (drinkKind == DRINK_FIRE) {

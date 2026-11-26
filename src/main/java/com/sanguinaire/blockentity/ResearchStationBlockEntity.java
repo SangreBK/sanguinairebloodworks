@@ -81,7 +81,11 @@ public class ResearchStationBlockEntity extends MachineBlockEntity {
     private ItemStack displayed = ItemStack.EMPTY;
     private boolean displayActive;
 
+    /** A copy of the specimen being studied; the real one stays in the slot until the study is done. */
     private ItemStack researching = ItemStack.EMPTY;
+    /** A specimen an older version had already taken out of the slot; put back on the next tick. */
+    private ItemStack legacyHeld = ItemStack.EMPTY;
+    private static final String TAG_IN_SLOT = "InSlot";
     private int progress;
     @Nullable
     private UUID researcher;
@@ -129,13 +133,18 @@ public class ResearchStationBlockEntity extends MachineBlockEntity {
         return slot == SLOT_JOURNAL ? 1 : 64;
     }
 
+    /**
+     * The specimen stays in its slot until the study is done, so nothing is in process except a specimen saved by an
+     * older version (which took it out at the start); that one is returned on break or on the next tick.
+     */
     @Override
     protected List<ItemStack> getProcessingStacks() {
-        return researching.isEmpty() ? List.of() : List.of(researching);
+        return legacyHeld.isEmpty() ? List.of() : List.of(legacyHeld);
     }
 
     @Override
     protected void clearProcessing() {
+        legacyHeld = ItemStack.EMPTY;
         researching = ItemStack.EMPTY;
         progress = 0;
         researcher = null;
@@ -234,8 +243,20 @@ public class ResearchStationBlockEntity extends MachineBlockEntity {
 
     private void tick(Level level) {
         updateJournalState(level);
+        returnLegacyHeld(level);
         if (researching.isEmpty()) {
             tryStartResearch(level);
+            return;
+        }
+        ItemStack specimen = inventory.getStackInSlot(SLOT_INGREDIENT);
+        if (specimen.isEmpty() || !ItemStack.isSameItemSameTags(specimen, researching)) {
+            // Taken out or swapped before the study finished: nothing is used up, the study starts over.
+            researching = ItemStack.EMPTY;
+            progress = 0;
+            researcher = null;
+            setStatus(STATUS_IDLE);
+            setChanged();
+            syncToClients();
             return;
         }
         if (!hasJournal()) {
@@ -253,6 +274,7 @@ public class ResearchStationBlockEntity extends MachineBlockEntity {
             setStatus(STATUS_AWAITING_RESEARCHER);
             return;
         }
+        inventory.extractItem(SLOT_INGREDIENT, 1, false); // only now is the specimen used up
         ResearchManager.completeResearch(owner, researching);
         owner.giveExperiencePoints(EXPERIENCE);
         researching = ItemStack.EMPTY;
@@ -263,6 +285,20 @@ public class ResearchStationBlockEntity extends MachineBlockEntity {
         syncToClients(); // the part is used up: take it off the spike
         BlockPos pos = getBlockPos();
         level.playSound(null, pos, SoundEvents.ENCHANTMENT_TABLE_USE, SoundSource.BLOCKS, 0.8F, 0.8F);
+    }
+
+    private void returnLegacyHeld(Level level) {
+        if (legacyHeld.isEmpty()) {
+            return;
+        }
+        ItemStack left = inventory.insertItem(SLOT_INGREDIENT, legacyHeld, false);
+        if (!left.isEmpty()) {
+            BlockPos pos = getBlockPos();
+            net.minecraft.world.Containers.dropItemStack(level, pos.getX(), pos.getY() + 1, pos.getZ(), left);
+        }
+        legacyHeld = ItemStack.EMPTY;
+        progress = 0;
+        setChanged();
     }
 
     private void tryStartResearch(Level level) {
@@ -284,7 +320,7 @@ public class ResearchStationBlockEntity extends MachineBlockEntity {
             setStatus(STATUS_ALREADY_KNOWN);
             return;
         }
-        researching = inventory.extractItem(SLOT_INGREDIENT, 1, false);
+        researching = ingredient.copyWithCount(1);
         researcher = user.getUUID();
         progress = 0;
         setStatus(STATUS_RESEARCHING);
@@ -317,6 +353,10 @@ public class ResearchStationBlockEntity extends MachineBlockEntity {
             tag.put(TAG_RESEARCHING, researching.save(new CompoundTag()));
         }
         tag.putInt(TAG_PROGRESS, progress);
+        tag.putBoolean(TAG_IN_SLOT, true);
+        if (!legacyHeld.isEmpty()) {
+            tag.put("LegacyHeld", legacyHeld.save(new CompoundTag()));
+        }
         if (researcher != null) {
             tag.putUUID(TAG_RESEARCHER, researcher);
         }
@@ -363,6 +403,12 @@ public class ResearchStationBlockEntity extends MachineBlockEntity {
     public void load(CompoundTag tag) {
         super.load(tag);
         researching = tag.contains(TAG_RESEARCHING) ? ItemStack.of(tag.getCompound(TAG_RESEARCHING)) : ItemStack.EMPTY;
+        legacyHeld = tag.contains("LegacyHeld") ? ItemStack.of(tag.getCompound("LegacyHeld")) : ItemStack.EMPTY;
+        if (!researching.isEmpty() && !tag.getBoolean(TAG_IN_SLOT)) {
+            // Saved by an older version that had already taken the specimen out of the slot.
+            legacyHeld = researching.copy();
+            researching = ItemStack.EMPTY;
+        }
         progress = tag.getInt(TAG_PROGRESS);
         researcher = tag.hasUUID(TAG_RESEARCHER) ? tag.getUUID(TAG_RESEARCHER) : null;
         lastUser = tag.hasUUID(TAG_LAST_USER) ? tag.getUUID(TAG_LAST_USER) : null;

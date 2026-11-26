@@ -1,5 +1,6 @@
 package com.sanguinaire.mutation;
 
+import com.sanguinaire.registry.ModItems;
 import com.sanguinaire.Sanguinaire;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Item;
@@ -14,7 +15,7 @@ import java.util.function.Supplier;
 
 /**
  * Serums that are not transformations but strengthen the body. They are brewed in the Serum Synthesizer from
- * vanilla ingredients, and never cause Weakened Hearts.
+ * three body parts of different creatures (no transformation uses these combinations), and never cause Weakened Hearts.
  * <ul>
  *     <li><b>Tainted Blood</b>: used once, permanently; every transformation lasts 20 seconds longer.</li>
  *     <li><b>Physical Boost</b>: Strength II for 2 minutes, during which Weakened Hearts are suppressed.</li>
@@ -24,9 +25,9 @@ import java.util.function.Supplier;
  * The {@link #getId() id} is stored in serum NBT and must never change.
  */
 public enum UtilitySerum {
-    TAINTED_BLOOD("tainted_blood", 0x3A0A1E, () -> Items.ECHO_SHARD, () -> Items.SUGAR, () -> Items.MAGMA_CREAM),
-    PHYSICAL_BOOST("physical_boost", 0xE0A030, () -> Items.GOLDEN_CARROT, () -> Items.BLAZE_POWDER, () -> Items.BONE_MEAL),
-    REVITALIZING("revitalizing", 0x3FC23A, () -> Items.APPLE, () -> Items.EMERALD, () -> Items.BONE);
+    TAINTED_BLOOD("tainted_blood", 0x3A0A1E, ModItems.VENOM_FANG, ModItems.BOOMING_DIAPHRAGM, ModItems.SHRIVELED_HEART),
+    PHYSICAL_BOOST("physical_boost", 0xE0A030, ModItems.OILY_FLESH, ModItems.TOUGH_FLESH, ModItems.VILLAGER_FLESH),
+    REVITALIZING("revitalizing", 0x3FC23A, ModItems.VILLAGER_HEART, ModItems.SPIDER_GLAND, ModItems.MOUNTAIN_TALLOW);
 
     /** Tainted Blood: extra transformation time. */
     public static final int TAINTED_BLOOD_BONUS_TICKS = 30 * 20;
