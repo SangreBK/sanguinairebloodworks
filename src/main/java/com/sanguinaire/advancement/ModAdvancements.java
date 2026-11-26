@@ -43,6 +43,8 @@ public final class ModAdvancements {
     public static final String ACID_REFLUX = "acid_reflux";
     public static final String DOG_EAT_DOG = "dog_eat_dog";
     public static final String RUST_IN_PEACE = "rust_in_peace";
+    /** Injecting a Revitalizing Serum (was the Revitalizing Torn Page advancement until that serum became researchable). */
+    public static final String SECOND_WIND = "second_wind";
 
     private ModAdvancements() {
     }

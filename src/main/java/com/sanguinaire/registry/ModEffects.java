@@ -15,6 +15,11 @@ public final class ModEffects {
 
     public static final RegistryObject<MobEffect> DECAYED_ANATOMY = EFFECTS.register("decayed_anatomy", DecayedAnatomyEffect::new);
 
+    public static final RegistryObject<MobEffect> DELAYED_ACCRETION = EFFECTS.register("delayed_accretion",
+            com.sanguinaire.effect.DelayedAccretionEffect::new);
+
+    public static final RegistryObject<MobEffect> LEECHING = EFFECTS.register("leeching", com.sanguinaire.effect.LeechingEffect::new);
+
     private ModEffects() {
     }
 }

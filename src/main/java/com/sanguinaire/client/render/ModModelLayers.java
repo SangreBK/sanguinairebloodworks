@@ -9,6 +9,7 @@ public final class ModModelLayers {
     public static final ModelLayerLocation ROTTING_ABOMINATION = new ModelLayerLocation(Sanguinaire.id("rotting_abomination"), "main");
     public static final ModelLayerLocation CONSCRIPT = new ModelLayerLocation(Sanguinaire.id("conscript"), "main");
     public static final ModelLayerLocation FADEHOUND = new ModelLayerLocation(Sanguinaire.id("fadehound"), "main");
+    public static final ModelLayerLocation SANGUINE_LEECH = new ModelLayerLocation(Sanguinaire.id("sanguine_leech"), "main");
 
     private ModModelLayers() {
     }

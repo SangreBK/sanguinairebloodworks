@@ -27,7 +27,13 @@ import com.sanguinaire.client.LaserBeamClient;
 import com.sanguinaire.client.model.FadeHoundModel;
 import com.sanguinaire.client.model.GoatmanModel;
 import com.sanguinaire.client.model.RottingAbominationModel;
+import com.sanguinaire.mutation.DragonForm;
 import com.sanguinaire.mutation.MutationAbilities;
+import com.sanguinaire.mutation.MutationTrait;
+import net.minecraft.client.renderer.entity.EndCrystalRenderer;
+import net.minecraft.client.renderer.entity.EnderDragonRenderer;
+import net.minecraft.world.entity.boss.enderdragon.EndCrystal;
+import net.minecraft.world.entity.boss.enderdragon.EnderDragon;
 import com.sanguinaire.mutation.MutationType;
 import com.sanguinaire.mutation.TransformationManager;
 import net.minecraft.client.Minecraft;
@@ -107,6 +113,8 @@ public final class TransformationRenderer {
 
     /** Puppet entities, by the id of the player they stand in for. */
     private static final Map<Integer, Puppet> PUPPETS = new HashMap<>();
+    /** How far the shrunken Ender Dragon model is raised inside its hitbox. */
+    private static final float DRAGON_RENDER_LIFT = 0.35F;
     /** An ability wind-up animation playing on a player's creature model. */
     private static final class Animation {
         final int kind;
@@ -211,6 +219,9 @@ public final class TransformationRenderer {
         if (type == MutationType.FADEHOUND) {
             renderFadeSplit(player, poseStack, buffers, partialTick, light);
         }
+        if (!hidden && type.hasTrait(MutationTrait.CRYSTAL_HEALING)) {
+            renderCrystalBeam(player, poseStack, buffers, partialTick, light);
+        }
         renderLaser(player, poseStack, buffers, partialTick);
     }
 
@@ -223,7 +234,38 @@ public final class TransformationRenderer {
         syncPuppet(player, puppet);
         EntityRenderer<? super LivingEntity> renderer = Minecraft.getInstance().getEntityRenderDispatcher().getRenderer(puppet);
         float yaw = Mth.lerp(partialTick, player.yRotO, player.getYRot());
+        if (puppet instanceof PuppetDragon) {
+            // The real dragon is 16 blocks long: shrink it to the form's hitbox, lifted so its belly sits on the floor
+            // of the hitbox instead of below it.
+            poseStack.pushPose();
+            poseStack.translate(0.0F, DRAGON_RENDER_LIFT, 0.0F);
+            poseStack.scale(MutationType.ENDER_DRAGON_SCALE, MutationType.ENDER_DRAGON_SCALE, MutationType.ENDER_DRAGON_SCALE);
+            renderer.render(puppet, yaw, partialTick, poseStack, buffers, light);
+            poseStack.popPose();
+            return;
+        }
         renderer.render(puppet, yaw, partialTick, poseStack, buffers, light);
+    }
+
+    /**
+     * Ender Dragon form: the vanilla healing beam from the nearest End Crystal (vanilla draws it from the dragon to its
+     * {@code nearestCrystal}; the server heals using the same choice, {@link DragonForm#findHealingCrystal}). Drawn
+     * unscaled, from the middle of the hitbox.
+     */
+    private static void renderCrystalBeam(Player player, PoseStack poseStack, MultiBufferSource buffers, float partialTick, int light) {
+        EndCrystal crystal = DragonForm.findHealingCrystal(player);
+        if (crystal == null) {
+            return;
+        }
+        float originY = player.getBbHeight() * 0.5F;
+        float dx = (float) (Mth.lerp(partialTick, crystal.xo, crystal.getX()) - Mth.lerp(partialTick, player.xo, player.getX()));
+        float dy = (float) (Mth.lerp(partialTick, crystal.yo, crystal.getY()) - Mth.lerp(partialTick, player.yo, player.getY()));
+        float dz = (float) (Mth.lerp(partialTick, crystal.zo, crystal.getZ()) - Mth.lerp(partialTick, player.zo, player.getZ()));
+        poseStack.pushPose();
+        poseStack.translate(0.0F, originY, 0.0F);
+        EnderDragonRenderer.renderCrystalBeams(dx, dy - originY + EndCrystalRenderer.getY(crystal, partialTick), dz, partialTick,
+                player.tickCount, poseStack, buffers, light);
+        poseStack.popPose();
     }
 
     @Nullable
@@ -260,6 +302,9 @@ public final class TransformationRenderer {
         }
         if (appearance == EntityType.RAVAGER) {
             return new PuppetRavager(level);
+        }
+        if (appearance == EntityType.ENDER_DRAGON) {
+            return new PuppetDragon(level);
         }
         return appearance.create(level);
     }
@@ -611,6 +656,9 @@ public final class TransformationRenderer {
             if (puppet instanceof PuppetRavager ravager) {
                 ravager.tickAnimations(player);
             }
+            if (puppet instanceof PuppetDragon dragon) {
+                dragon.tickWings(moved);
+            }
             if (puppet instanceof Phantom phantom && !player.isInvisible()) {
                 spawnPhantomWingParticles(player, phantom);
             }
@@ -674,6 +722,29 @@ public final class TransformationRenderer {
         @Override
         public int getStunnedTick() {
             return 0;
+        }
+    }
+
+    /**
+     * The dragon's renderer and model read its body turn and neck/tail curve from a history of past positions that only
+     * fills while the real dragon ticks ({@code EnderDragon#getLatencyPos}). The puppet answers with the player's
+     * current heading instead (the dragon's own yaw runs 180 degrees from a normal mob's), giving a straight body that
+     * turns with the player, and beats its wings at the vanilla pace (faster while moving).
+     */
+    private static final class PuppetDragon extends EnderDragon {
+        PuppetDragon(Level level) {
+            super(EntityType.ENDER_DRAGON, level);
+        }
+
+        void tickWings(float moved) {
+            oFlapTime = flapTime;
+            flapTime += 0.2F / (moved * 10.0F + 1.0F) * 0.5F + (moved > 0.05F ? 0.05F : 0.0F);
+        }
+
+        @Override
+        public double[] getLatencyPos(int bufferIndexOffset, float partialTick) {
+            float yaw = Mth.rotLerp(partialTick, this.yRotO, this.getYRot());
+            return new double[]{Mth.wrapDegrees(yaw + 180.0F), this.getY(), 0.0D};
         }
     }
 

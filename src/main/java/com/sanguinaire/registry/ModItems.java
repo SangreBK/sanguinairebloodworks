@@ -70,6 +70,8 @@ public final class ModItems {
             () -> new ForgeSpawnEggItem(ModEntities.CONSCRIPT, 0x3B4A5A, 0x8E2B2B, new Item.Properties()));
     public static final RegistryObject<ForgeSpawnEggItem> ZOMBIFIED_CONSCRIPT_SPAWN_EGG = ITEMS.register("zombified_conscript_spawn_egg",
             () -> new ForgeSpawnEggItem(ModEntities.ZOMBIFIED_CONSCRIPT, 0x3B4A5A, 0x5E8A4A, new Item.Properties()));
+    public static final RegistryObject<ForgeSpawnEggItem> SANGUINE_LEECH_SPAWN_EGG = ITEMS.register("sanguine_leech_spawn_egg",
+            () -> new ForgeSpawnEggItem(ModEntities.SANGUINE_LEECH, 0x3A0D12, 0xB3202A, new Item.Properties()));
 
     // ---- Body parts ----------------------------------------------------------------------------------------------
     // Zombie family
@@ -124,6 +126,16 @@ public final class ModItems {
     public static final RegistryObject<Item> ILLAGER_NOSE = bodyPart("illager_nose");
     public static final RegistryObject<Item> TOUGH_FLESH = bodyPart("tough_flesh");
     public static final RegistryObject<Item> GIANT_TOOTH = bodyPart("giant_tooth");
+
+    // Sanguine Leech
+    public static final RegistryObject<Item> LEECH_TONGUE = bodyPart("leech_tongue");
+    public static final RegistryObject<Item> BLOOD_SAC = bodyPart("blood_sac");
+    public static final RegistryObject<Item> SQUIRMING_TAIL = bodyPart("squirming_tail");
+
+    // Ender Dragon
+    public static final RegistryObject<Item> DRACONIC_SCALES = bodyPart("draconic_scales");
+    public static final RegistryObject<Item> BURNING_GLAND = bodyPart("burning_gland");
+    public static final RegistryObject<Item> END_MEMBRANE = bodyPart("end_membrane");
 
     private ModItems() {
     }

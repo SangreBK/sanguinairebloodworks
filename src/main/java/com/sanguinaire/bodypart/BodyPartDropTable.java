@@ -1,5 +1,6 @@
 package com.sanguinaire.bodypart;
 
+import com.sanguinaire.registry.ModEntities;
 import com.sanguinaire.registry.ModItems;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.EntityType;
@@ -15,7 +16,7 @@ import java.util.function.Supplier;
 /**
  * Special body-part pools for each supported mob, with the exact drop chances from the design document.
  * <p>
- * A qualifying kill <b>always</b> drops exactly one material. The listed chances are relative weights: a pool of
+ * A qualifying kill <b>always</b> drops exactly one material (the Ender Dragon drops all three, {@link #dropsAll}). The listed chances are relative weights: a pool of
  * 25 / 10 / 5 drops its materials 62.5% / 25% / 12.5% of the time ({@link #getShare}).
  * <p>
  * "Venomous Spider" in the design document is the vanilla Cave Spider.
@@ -70,6 +71,11 @@ public final class BodyPartDropTable {
         // 2026-11-24): Tough Flesh, Illager Nose and Giant Tooth, the three Ravager serum ingredients.
         map.put(EntityType.RAVAGER, List.of(
                 e(ModItems.TOUGH_FLESH, 25), e(ModItems.ILLAGER_NOSE, 25), e(ModItems.GIANT_TOOTH, 10)));
+        map.put(ModEntities.SANGUINE_LEECH.get(), List.of(
+                e(ModItems.LEECH_TONGUE, 5), e(ModItems.BLOOD_SAC, 25), e(ModItems.SQUIRMING_TAIL, 10)));
+        // The Ender Dragon is a one-off boss, so it yields all three of its parts at once (see dropsAll).
+        map.put(EntityType.ENDER_DRAGON, List.of(
+                e(ModItems.DRACONIC_SCALES, 100), e(ModItems.BURNING_GLAND, 100), e(ModItems.END_MEMBRANE, 100)));
         return Collections.unmodifiableMap(map);
     }
 
@@ -109,6 +115,11 @@ public final class BodyPartDropTable {
             }
         }
         return entries.get(entries.size() - 1).item().get(); // float rounding at the very top of the range
+    }
+
+    /** Mobs whose qualifying kill drops every material in their pool instead of one (the Ender Dragon). */
+    public static boolean dropsAll(EntityType<?> type) {
+        return type == EntityType.ENDER_DRAGON;
     }
 
     /** The real chance (in percent) that a qualifying kill of a mob with this pool drops {@code entry}. */

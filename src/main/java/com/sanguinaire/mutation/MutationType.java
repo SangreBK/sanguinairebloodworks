@@ -48,7 +48,8 @@ public enum MutationType {
     VILLAGER("villager", 0xB8735A, 30, ModItems.VILLAGER_HEART, ModItems.VILLAGER_NOSE, ModItems.VILLAGER_FLESH),
     WOLF("wolf", 0xA9A9A9, 30, ModItems.WOLF_FUR, ModItems.SHARP_FANGS, ModItems.CANINE_TONGUE),
     GOAT("goat", 0xD8CFBE, 30, ModItems.MOUNTAIN_TALLOW, ModItems.GOAT_FUR, ModItems.CLOVEN_HOOF),
-    RAVAGER("ravager", 0x5C5650, 30, ModItems.ILLAGER_NOSE, ModItems.TOUGH_FLESH, ModItems.GIANT_TOOTH);
+    RAVAGER("ravager", 0x5C5650, 30, ModItems.ILLAGER_NOSE, ModItems.TOUGH_FLESH, ModItems.GIANT_TOOTH),
+    ENDER_DRAGON("ender_dragon", 0x2A1238, 30, ModItems.DRACONIC_SCALES, ModItems.BURNING_GLAND, ModItems.END_MEMBRANE);
 
     private static final Map<String, MutationType> BY_ID = new HashMap<>();
 
@@ -178,10 +179,21 @@ public enum MutationType {
             case WOLF -> TransformationStats.ofMob(EntityType.WOLF, true);
             case GOAT -> TransformationStats.ofMob(EntityType.GOAT, true);
             case RAVAGER -> TransformationStats.ofMob(EntityType.RAVAGER, true);
+            // The dragon's own 200 health; it has no attack attribute, so its bite uses the vanilla head hit (10).
+            case ENDER_DRAGON -> {
+                TransformationStats dragon = TransformationStats.ofMob(EntityType.ENDER_DRAGON, true);
+                yield TransformationStats.of(dragon.maxHealth(), dragon.armor(), dragon.armorToughness(), 1.0D,
+                        ENDER_DRAGON_DAMAGE, TransformationStats.MOB_ATTACK_SPEED);
+            }
         };
     }
 
     private static final double GOATMAN_ATTACK_SPEED = 2.0D;
+    /** The vanilla Ender Dragon's head deals 10 damage. */
+    private static final double ENDER_DRAGON_DAMAGE = 10.0D;
+    /** The Ender Dragon form's hitbox and how much its model is shrunk (the real dragon is 16 x 8 blocks). */
+    public static final float ENDER_DRAGON_SCALE = 0.3F;
+    private static final EntityDimensions ENDER_DRAGON_DIMENSIONS = EntityDimensions.scalable(2.5F, 1.5F);
 
     private static TransformationStats configured(SanguinaireConfig.CreatureStats config, double knockbackResistance,
                                                   double attackSpeed) {
@@ -239,6 +251,8 @@ public enum MutationType {
             case WOLF -> EnumSet.of(MutationTrait.FEARED_BY_SKELETONS_AND_SHEEP);
             case GOAT -> EnumSet.of(MutationTrait.FALL_DAMAGE_IMMUNE);
             case RAVAGER -> EnumSet.of(MutationTrait.IGNORED_BY_ILLAGERS);
+            case ENDER_DRAGON -> EnumSet.of(MutationTrait.FLIGHT, MutationTrait.FIRE_IMMUNE, MutationTrait.DRAGON_REPULSION,
+                    MutationTrait.CRYSTAL_HEALING);
         };
     }
 
@@ -266,6 +280,7 @@ public enum MutationType {
             case WOLF -> EntityType.WOLF;
             case GOAT -> EntityType.GOAT;
             case RAVAGER -> EntityType.RAVAGER;
+            case ENDER_DRAGON -> EntityType.ENDER_DRAGON;
             case GOATMAN, ROTTING_ABOMINATION, FADEHOUND -> null;
         };
     }
@@ -289,6 +304,7 @@ public enum MutationType {
             case WOLF -> SoundEvents.WOLF_HURT;
             case GOAT -> SoundEvents.GOAT_HURT;
             case RAVAGER -> SoundEvents.RAVAGER_HURT;
+            case ENDER_DRAGON -> SoundEvents.ENDER_DRAGON_HURT;
             case GOATMAN -> SoundEvents.GOAT_HURT;
             case ROTTING_ABOMINATION -> SoundEvents.HUSK_HURT;
             case FADEHOUND -> SoundEvents.ENDERMAN_HURT;
@@ -354,7 +370,7 @@ public enum MutationType {
             case WARDEN -> new StepSound(SoundEvents.WARDEN_STEP, 10.0F);
             case GUARDIAN -> inWater ? StepSound.SILENT : new StepSound(SoundEvents.GUARDIAN_FLOP, 0.6F);
             case ELDER_GUARDIAN -> inWater ? StepSound.SILENT : new StepSound(SoundEvents.ELDER_GUARDIAN_FLOP, 0.6F);
-            case PHANTOM, GHAST -> StepSound.SILENT;
+            case PHANTOM, GHAST, ENDER_DRAGON -> StepSound.SILENT;
             case GOATMAN -> new StepSound(ModSounds.GOATMAN_STEP.get(), CUSTOM_STEP_VOLUME);
             case ROTTING_ABOMINATION -> new StepSound(ModSounds.ABOMINATION_STEP.get(), CUSTOM_STEP_VOLUME);
             case FADEHOUND -> new StepSound(SoundEvents.WOLF_STEP, FADEHOUND_STEP_VOLUME, DEEP_PITCH); // a wolf's, much deeper
@@ -380,6 +396,7 @@ public enum MutationType {
             case WOLF -> SoundEvents.WOLF_AMBIENT;
             case GOAT -> SoundEvents.GOAT_AMBIENT;
             case RAVAGER -> SoundEvents.RAVAGER_AMBIENT;
+            case ENDER_DRAGON -> SoundEvents.ENDER_DRAGON_AMBIENT;
             case FADEHOUND -> ModSounds.FADEHOUND_AMBIENT.get();
             // Creepers are silent until they hiss; the Goatman and Abomination have a looping idle sound instead.
             case CREEPER, GOATMAN, ROTTING_ABOMINATION -> null;
@@ -404,6 +421,9 @@ public enum MutationType {
      * (Goatman ~2.6 blocks tall, Rotting Abomination ~2.1 and wide, FadeHound ~1 block tall and long).
      */
     public EntityDimensions getDimensions() {
+        if (this == ENDER_DRAGON) {
+            return ENDER_DRAGON_DIMENSIONS; // a full-size dragon could not fit anywhere
+        }
         EntityType<? extends LivingEntity> appearance = getAppearance();
         if (appearance != null) {
             return appearance.getDimensions();
@@ -467,6 +487,7 @@ public enum MutationType {
         return switch (this) {
             case PHANTOM -> 0.025F;
             case GHAST -> 0.018F;
+            case ENDER_DRAGON -> 0.04F;
             default -> 0.05F;
         };
     }

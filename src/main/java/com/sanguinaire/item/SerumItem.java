@@ -256,6 +256,18 @@ public class SerumItem extends Item {
                 MobEffects.HEAL.applyInstantenousEffect(null, null, player, 1, 1.0D);
                 player.displayClientMessage(Component.translatable("message." + Sanguinaire.MOD_ID + ".revitalizing")
                         .withStyle(ChatFormatting.GREEN), true);
+                com.sanguinaire.advancement.ModAdvancements.grant(player, com.sanguinaire.advancement.ModAdvancements.SECOND_WIND);
+            }
+            case DELAYED_ACCRETION -> {
+                // The effect is the source of truth: when it ends (or is removed), the held damage lands at once.
+                player.addEffect(new MobEffectInstance(ModEffects.DELAYED_ACCRETION.get(), UtilitySerum.DELAYED_ACCRETION_TICKS, 0));
+                player.displayClientMessage(Component.translatable("message." + Sanguinaire.MOD_ID + ".delayed_accretion")
+                        .withStyle(ChatFormatting.DARK_PURPLE), true);
+            }
+            case LEECHING -> {
+                player.addEffect(new MobEffectInstance(ModEffects.LEECHING.get(), UtilitySerum.LEECHING_TICKS, 0));
+                player.displayClientMessage(Component.translatable("message." + Sanguinaire.MOD_ID + ".leeching")
+                        .withStyle(ChatFormatting.DARK_RED), true);
             }
         }
         stack.shrink(1);

@@ -563,6 +563,7 @@ public final class TransformationManager {
     private static void enableFlight(ServerPlayer player, MutationType type) {
         Abilities abilities = player.getAbilities();
         abilities.mayfly = true;
+        abilities.flying = true;
         abilities.setFlyingSpeed(type.getFlyingSpeed());
         player.onUpdateAbilities();
     }
@@ -651,9 +652,10 @@ public final class TransformationManager {
         int age = player.tickCount;
 
         tickAmbientSound(player, type);
-        if (type.hasTrait(MutationTrait.FLIGHT) && !player.getAbilities().mayfly) {
-            enableFlight(player, type);
+        if (type.hasTrait(MutationTrait.FLIGHT) && (!player.getAbilities().mayfly || !player.getAbilities().flying)) {
+            enableFlight(player, type); // flying forms can never land and walk (double-tapping jump is undone at once)
         }
+        DragonForm.tick(player, type);
         if (type.hasTrait(MutationTrait.WALL_CLIMBING) && player.horizontalCollision) {
             player.resetFallDistance(); // the client climbs; the server must not count it as a fall
         }

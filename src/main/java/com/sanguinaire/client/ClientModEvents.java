@@ -62,6 +62,7 @@ public final class ClientModEvents {
         event.registerEntityRenderer(ModEntities.CONSCRIPT.get(), ConscriptRenderer::new);
         event.registerEntityRenderer(ModEntities.ZOMBIFIED_CONSCRIPT.get(), com.sanguinaire.client.render.ZombifiedConscriptRenderer::new);
         event.registerEntityRenderer(ModEntities.NULLIFICATION_POTION.get(), ThrownItemRenderer::new);
+        event.registerEntityRenderer(ModEntities.SANGUINE_LEECH.get(), com.sanguinaire.client.render.SanguineLeechRenderer::new);
     }
 
     @SubscribeEvent
@@ -70,6 +71,7 @@ public final class ClientModEvents {
         event.registerLayerDefinition(ModModelLayers.ROTTING_ABOMINATION, RottingAbominationModel::createBodyLayer);
         event.registerLayerDefinition(ModModelLayers.FADEHOUND, FadeHoundModel::createBodyLayer);
         event.registerLayerDefinition(ModModelLayers.CONSCRIPT, com.sanguinaire.client.model.ConscriptModel::createBodyLayer);
+        event.registerLayerDefinition(ModModelLayers.SANGUINE_LEECH, com.sanguinaire.client.model.SanguineLeechModel::createBodyLayer);
     }
 
     @SubscribeEvent

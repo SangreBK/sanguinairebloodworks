@@ -84,5 +84,9 @@ public enum MutationTrait {
     /** Cobwebs do not slow you down. */
     COBWEB_WALKING,
     /** You swim much faster (Guardian / Elder Guardian speed). */
-    SWIFT_SWIMMER
+    SWIFT_SWIMMER,
+    /** Creatures touching you are thrown back and take 2 damage (Ender Dragon). */
+    DRAGON_REPULSION,
+    /** The nearest End Crystal within 32 blocks heals you, as it does the Ender Dragon. */
+    CRYSTAL_HEALING
 }

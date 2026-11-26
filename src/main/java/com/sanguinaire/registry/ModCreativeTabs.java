@@ -34,6 +34,7 @@ public final class ModCreativeTabs {
                 output.accept(ModItems.NULLIFICATION_POTION.get());
                 output.accept(ModItems.CONSCRIPT_SPAWN_EGG.get());
                 output.accept(ModItems.ZOMBIFIED_CONSCRIPT_SPAWN_EGG.get());
+                output.accept(ModItems.SANGUINE_LEECH_SPAWN_EGG.get());
                 for (BloodType blood : BloodType.values()) {
                     output.accept(BloodSampleItem.create(blood, null));
                 }

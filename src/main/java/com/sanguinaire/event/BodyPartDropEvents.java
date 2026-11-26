@@ -54,12 +54,21 @@ public final class BodyPartDropEvents {
             return;
         }
 
+        if (BodyPartDropTable.dropsAll(victim.getType())) {
+            for (BodyPartDropTable.Entry entry : BodyPartDropTable.getEntries(victim.getType())) {
+                addDrop(event, victim, entry.item().get());
+            }
+            return;
+        }
         Item material = BodyPartDropTable.roll(victim.getType(), victim.getRandom());
         if (material == null) {
             return;
         }
+        addDrop(event, victim, material);
+    }
 
-        ItemEntity drop = new ItemEntity(level, victim.getX(), victim.getY(), victim.getZ(), new ItemStack(material));
+    private static void addDrop(LivingDropsEvent event, LivingEntity victim, Item material) {
+        ItemEntity drop = new ItemEntity(victim.level(), victim.getX(), victim.getY(), victim.getZ(), new ItemStack(material));
         drop.setDefaultPickUpDelay();
         event.getDrops().add(drop);
     }

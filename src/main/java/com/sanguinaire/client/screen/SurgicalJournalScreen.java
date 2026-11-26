@@ -193,7 +193,7 @@ public class SurgicalJournalScreen extends Screen {
 
         List<Entry> enhancing = new ArrayList<>();
         for (UtilitySerum serum : UtilitySerum.values()) {
-            // Utility serum entries are unlocked by reading Torn Pages found in Ancient Cities.
+            // Torn Page serums are unlocked by reading the page; the others by researching any of their ingredients.
             if (player != null && ResearchManager.isSerumUnlocked(player, serum)) {
                 enhancing.add(new Entry("serum:" + serum.getId(), serum.getDisplayName(), lines -> buildUtilityEntry(lines, serum)));
             }
@@ -368,7 +368,8 @@ public class SurgicalJournalScreen extends Screen {
             addWrapped(lines, mobName(mob.getKey()).copy().withStyle(ChatFormatting.BOLD), INK);
             for (BodyPartDropTable.Entry drop : mob.getValue()) {
                 Component name = new ItemStack(drop.item().get()).getHoverName();
-                addWrapped(lines, Component.translatable(PREFIX + "saw.drop_line", name, formatChance(BodyPartDropTable.getShare(mob.getValue(), drop))), INK);
+                addWrapped(lines, Component.translatable(PREFIX + "saw.drop_line", name, formatChance(BodyPartDropTable.dropsAll(mob.getKey())
+                        ? 100.0F : BodyPartDropTable.getShare(mob.getValue(), drop))), INK);
             }
         }
     }
@@ -395,19 +396,31 @@ public class SurgicalJournalScreen extends Screen {
         addTitle(lines, serum.getDisplayName());
         addSpacer(lines);
         addHeading(lines, "formula");
+        LocalPlayer player = Minecraft.getInstance().player;
         List<ItemStack> icons = new ArrayList<>(3);
+        int known = 0;
         for (Item ingredient : serum.getIngredients()) {
-            icons.add(new ItemStack(ingredient));
+            // Torn Page serums come complete; researched serums reveal each ingredient as it is studied.
+            if (player == null || ResearchManager.isSerumIngredientKnown(player, serum, ingredient)) {
+                icons.add(new ItemStack(ingredient));
+                known++;
+            } else {
+                icons.add(null);
+            }
         }
         lines.add(new Line(null, INK, icons));
         for (ItemStack icon : icons) {
-            addWrapped(lines, Component.literal("- ").append(icon.getHoverName()), INK);
+            MutableComponent name = icon == null
+                    ? Component.translatable(PREFIX + "unknown_ingredient")
+                    : icon.getHoverName().copy();
+            addWrapped(lines, Component.literal("- ").append(name), icon == null ? FADED_INK : INK);
         }
-        addWrapped(lines, Component.translatable(PREFIX + "formula_complete").withStyle(ChatFormatting.ITALIC), RUBRIC);
+        addWrapped(lines, known == 3
+                ? Component.translatable(PREFIX + "formula_complete").withStyle(ChatFormatting.ITALIC)
+                : Component.translatable(PREFIX + "formula_partial", known), known == 3 ? RUBRIC : FADED_INK);
         addSpacer(lines);
         addHeading(lines, "effects");
         addWrapped(lines, Component.translatable(serum.getDescriptionKey()), INK);
-        LocalPlayer player = Minecraft.getInstance().player;
         if (serum == UtilitySerum.TAINTED_BLOOD && player != null
                 && PlayerMutationProvider.get(player).map(data -> data.hasTaintedBlood()).orElse(false)) {
             addSpacer(lines);

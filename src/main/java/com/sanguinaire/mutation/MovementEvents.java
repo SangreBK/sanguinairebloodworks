@@ -19,6 +19,7 @@ import java.lang.reflect.Field;
  *     <li>{@link MutationTrait#WALL_CLIMBING}: walking into a wall makes the player climb it, like a spider.</li>
  *     <li>{@link MutationTrait#COBWEB_WALKING}: cobwebs no longer slow the player down.</li>
  *     <li>{@link MutationTrait#SINKS}: the player sinks in water and can't swim up (Rotting Abomination).</li>
+ *     <li>{@link MutationTrait#FLIGHT}: flying forms are always flying; they can't switch it off and walk.</li>
  * </ul>
  * Cobweb slowdown is stored in {@code Entity#stuckSpeedMultiplier} (SRG {@code f_19865_}), which has no public
  * setter. It is cleared through {@link ObfuscationReflectionHelper}, which resolves the SRG name both in the
@@ -58,6 +59,14 @@ public final class MovementEvents {
         // Before movement: drop the cobweb slowdown picked up during the previous tick.
         if (event.phase == TickEvent.Phase.START && type.hasTrait(MutationTrait.COBWEB_WALKING) && isInCobweb(player)) {
             clearStuckSpeed(player);
+        }
+
+        // Flying forms are always airborne. Double-tapping jump (or touching the ground, which vanilla treats as landing)
+        // switches flight off on the client; it is switched straight back on (the server does the same).
+        if (event.phase == TickEvent.Phase.END && player.level().isClientSide() && player.isLocalPlayer()
+                && type.hasTrait(MutationTrait.FLIGHT) && player.getAbilities().mayfly && !player.getAbilities().flying) {
+            player.getAbilities().flying = true;
+            player.onUpdateAbilities();
         }
 
         // After movement, on the controlling client: climb walls the player is pushing against.

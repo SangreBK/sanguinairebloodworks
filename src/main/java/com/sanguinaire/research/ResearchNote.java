@@ -7,15 +7,19 @@ import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Knowledge that can only come from a Torn Page (Ancient City loot): the three utility serums and the three
+ * Knowledge that can only come from a Torn Page (Ancient City loot): the Torn Page utility serums and the three
  * original transformations. Each page holds exactly one note; reading it unlocks that journal entry for the reader
  * only. The id is the serum's or transformation's own id (they never collide), and is what the per-player unlock
  * list in {@link ResearchSavedData} stores.
+ * <p>
+ * The Revitalizing Serum used to be a Torn Page note (until 2026-11-26). It is now researched instead; players who
+ * already read its page keep the full formula (the old "revitalizing" unlock is still honoured by
+ * {@link ResearchManager}), and old pages holding it are rerolled into a valid note.
  */
 public enum ResearchNote {
     TAINTED_BLOOD(UtilitySerum.TAINTED_BLOOD, null),
     PHYSICAL_BOOST(UtilitySerum.PHYSICAL_BOOST, null),
-    REVITALIZING(UtilitySerum.REVITALIZING, null),
+    DELAYED_ACCRETION(UtilitySerum.DELAYED_ACCRETION, null),
     GOATMAN(null, MutationType.GOATMAN),
     ROTTING_ABOMINATION(null, MutationType.ROTTING_ABOMINATION),
     FADEHOUND(null, MutationType.FADEHOUND);

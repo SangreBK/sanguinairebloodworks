@@ -102,8 +102,32 @@ public final class ResearchManager {
         return ClientResearchCache.research().size();
     }
 
+    /**
+     * Whether this player's journal shows the utility serum's entry: Torn Page serums need their page; the others
+     * are discovered once any of their ingredients has been researched (or, for the Revitalizing Serum, if the player
+     * read its Torn Page back when it was one).
+     */
     public static boolean isSerumUnlocked(Player player, UtilitySerum serum) {
-        return isNoteUnlocked(player, serum.getId());
+        if (isNoteUnlocked(player, serum.getId())) {
+            return true;
+        }
+        if (serum.isTornPage()) {
+            return false;
+        }
+        for (Item ingredient : serum.getIngredients()) {
+            if (isResearched(player, ingredient)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Whether the journal shows this ingredient in the utility serum's formula. */
+    public static boolean isSerumIngredientKnown(Player player, UtilitySerum serum, Item ingredient) {
+        if (isNoteUnlocked(player, serum.getId())) {
+            return true; // a Torn Page (current or legacy) holds the complete formula
+        }
+        return !serum.isTornPage() && isResearched(player, ingredient);
     }
 
     /** Whether this player has read the Torn Page notes with this id ({@link ResearchNote#getId()}). */
@@ -243,14 +267,23 @@ public final class ResearchManager {
         if (id == null) {
             return;
         }
-        List<MutationType> newlyDiscovered = new ArrayList<>();
+        List<Component> newlyDiscovered = new ArrayList<>();
         int updated = 0;
         for (MutationType type : MutationType.values()) {
             if (type.usesIngredient(item) && !ResearchNote.isTornPageTransformation(type)) {
                 if (isDiscovered(player, type)) {
                     updated++;
                 } else {
-                    newlyDiscovered.add(type);
+                    newlyDiscovered.add(type.getDisplayName());
+                }
+            }
+        }
+        for (UtilitySerum serum : UtilitySerum.values()) {
+            if (serum.usesIngredient(item) && !serum.isTornPage() && !isNoteUnlocked(player, serum.getId())) {
+                if (isSerumUnlocked(player, serum)) {
+                    updated++;
+                } else {
+                    newlyDiscovered.add(serum.getDisplayName());
                 }
             }
         }
@@ -268,8 +301,8 @@ public final class ResearchManager {
         }
         player.sendSystemMessage(Component.translatable("message." + Sanguinaire.MOD_ID + ".research_complete", itemName)
                 .withStyle(ChatFormatting.DARK_RED));
-        for (MutationType type : newlyDiscovered) {
-            player.sendSystemMessage(Component.translatable("message." + Sanguinaire.MOD_ID + ".research_new_entry", type.getDisplayName())
+        for (Component entry : newlyDiscovered) {
+            player.sendSystemMessage(Component.translatable("message." + Sanguinaire.MOD_ID + ".research_new_entry", entry)
                     .withStyle(ChatFormatting.GOLD));
         }
         if (updated > 0) {

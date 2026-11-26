@@ -113,6 +113,9 @@ public final class MutationAbilities {
     private static final String COOLDOWN_SWOOP = "phantom_swoop";
     private static final String COOLDOWN_RAM = "goat_ram";
     private static final String COOLDOWN_WOLF_RAGE = "wolf_rage";
+    private static final String COOLDOWN_DRAGON_FIREBALL = "dragon_fireball";
+    /** The fireball's lingering cloud lasts 30 seconds (vanilla), so the breath recovers more slowly than a Ghast's. */
+    private static final int DRAGON_FIREBALL_COOLDOWN_TICKS = 8 * 20;
     private static final int SPIDER_STEALTH_TICKS = 8 * 20;
     private static final int SPIDER_STEALTH_COOLDOWN_TICKS = 8 * 20;
     private static final int HORDE_COOLDOWN_TICKS = 30 * 20;
@@ -270,6 +273,7 @@ public final class MutationAbilities {
             case PHANTOM -> swoop(player);
             case GOAT -> ram(player);
             case WOLF -> wolfRage(player);
+            case ENDER_DRAGON -> shootDragonFireball(player);
             default -> {
                 // This transformation has no active ability.
             }
@@ -280,7 +284,7 @@ public final class MutationAbilities {
         return switch (type) {
             case CREEPER, WARDEN, ENDERMAN, GHAST, GUARDIAN, ELDER_GUARDIAN, VILLAGER,
                  GOATMAN, ROTTING_ABOMINATION, FADEHOUND, RAVAGER, SPIDER, VENOMOUS_SPIDER, ZOMBIE, HUSK, DROWNED,
-                 PHANTOM, GOAT, WOLF -> true;
+                 PHANTOM, GOAT, WOLF, ENDER_DRAGON -> true;
             default -> false;
         };
     }
@@ -478,6 +482,29 @@ public final class MutationAbilities {
         fireball.setPos(spawn.x, spawn.y, spawn.z);
         level.addFreshEntity(fireball);
         level.levelEvent(null, 1016, player.blockPosition(), 0); // ghast shoot sound
+    }
+
+    // ---- Ender Dragon ------------------------------------------------------------------------------------------
+
+    /**
+     * Ender Dragon: spits a vanilla dragon fireball along the look direction. Where it bursts it leaves the dragon's
+     * lingering breath, a cloud of Instant Damage II that spreads for 30 seconds. The dragon is immune to its own
+     * breath ({@link DragonForm#onAttacked}).
+     */
+    private static void shootDragonFireball(ServerPlayer player) {
+        if (!checkCooldown(player, COOLDOWN_DRAGON_FIREBALL)) {
+            return;
+        }
+        startCooldown(player, COOLDOWN_DRAGON_FIREBALL, DRAGON_FIREBALL_COOLDOWN_TICKS);
+        Level level = player.level();
+        Vec3 look = player.getLookAngle();
+        net.minecraft.world.entity.projectile.DragonFireball fireball =
+                new net.minecraft.world.entity.projectile.DragonFireball(level, player, look.x, look.y, look.z);
+        // From the head, clear of the dragon's own hitbox.
+        Vec3 spawn = player.getEyePosition().add(look.scale(2.5D));
+        fireball.setPos(spawn.x, spawn.y, spawn.z);
+        level.addFreshEntity(fireball);
+        level.levelEvent(null, 1017, player.blockPosition(), 0); // ender dragon shoot sound
     }
 
     // ---- Guardian / Elder Guardian -----------------------------------------------------------------------------
