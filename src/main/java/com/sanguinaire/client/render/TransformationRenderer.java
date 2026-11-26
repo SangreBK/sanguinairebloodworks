@@ -220,7 +220,7 @@ public final class TransformationRenderer {
             renderFadeSplit(player, poseStack, buffers, partialTick, light);
         }
         if (!hidden && type.hasTrait(MutationTrait.CRYSTAL_HEALING)) {
-            renderCrystalBeam(player, poseStack, buffers, partialTick, light);
+            renderCrystalBeams(player, poseStack, buffers, partialTick, light);
         }
         renderLaser(player, poseStack, buffers, partialTick);
     }
@@ -247,15 +247,18 @@ public final class TransformationRenderer {
     }
 
     /**
-     * Ender Dragon form: the vanilla healing beam from the nearest End Crystal (vanilla draws it from the dragon to its
-     * {@code nearestCrystal}; the server heals using the same choice, {@link DragonForm#findHealingCrystal}). Drawn
+     * Ender Dragon form: the vanilla healing beam from every End Crystal in range (vanilla draws one from the dragon to its
+     * {@code nearestCrystal}; here every crystal heals, so each gets a beam: {@link DragonForm#findHealingCrystals}). Drawn
      * unscaled, to the raised dragon's body.
      */
-    private static void renderCrystalBeam(Player player, PoseStack poseStack, MultiBufferSource buffers, float partialTick, int light) {
-        EndCrystal crystal = DragonForm.findHealingCrystal(player);
-        if (crystal == null) {
-            return;
+    private static void renderCrystalBeams(Player player, PoseStack poseStack, MultiBufferSource buffers, float partialTick, int light) {
+        for (EndCrystal crystal : DragonForm.findHealingCrystals(player)) {
+            renderCrystalBeam(player, crystal, poseStack, buffers, partialTick, light);
         }
+    }
+
+    private static void renderCrystalBeam(Player player, EndCrystal crystal, PoseStack poseStack, MultiBufferSource buffers,
+                                          float partialTick, int light) {
         float originY = DRAGON_RENDER_LIFT + 1.0F; // the dragon's body, where vanilla's beam ends
         float dx = (float) (Mth.lerp(partialTick, crystal.xo, crystal.getX()) - Mth.lerp(partialTick, player.xo, player.getX()));
         float dy = (float) (Mth.lerp(partialTick, crystal.yo, crystal.getY()) - Mth.lerp(partialTick, player.yo, player.getY()));

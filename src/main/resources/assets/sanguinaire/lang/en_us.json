@@ -316,7 +316,7 @@
   "item.sanguinaire.burning_gland": "Burning Gland",
   "item.sanguinaire.end_membrane": "End Membrane",
   "mutation.sanguinaire.ender_dragon": "Ender Dragon",
-  "journal.sanguinaire.mutation.ender_dragon": "The lord of the End, shrunk to fit in a single body. You fly forever, never touching the ground, and fire cannot burn you. Anything that brushes against you is battered aside by your wings, taking 2 damage. And the old crystals still remember their master: while an End Crystal stands within 32 blocks, it binds itself to you with a beam of light and steadily mends your wounds.",
+  "journal.sanguinaire.mutation.ender_dragon": "The lord of the End, shrunk to fit in a single body. You fly forever, never touching the ground, and fire cannot burn you. Your eyes cannot be clouded by Blindness or Darkness. Anything that brushes against you is battered aside by your wings, taking 2 damage. And the old crystals still remember their master: every End Crystal within 32 blocks binds itself to you with a beam of light and steadily mends your wounds, and the more crystals stand around you, the faster you heal.",
   "journal.sanguinaire.mutation.ender_dragon.ability": "You spit a ball of dragon's breath. Where it bursts it leaves a spreading purple cloud that harms everything inside it for 30 seconds, but never you. Recovery: 8 seconds.",
   "advancements.sanguinaire.second_wind.title": "Second Wind",
   "advancements.sanguinaire.second_wind.description": "Inject a Revitalizing Serum",

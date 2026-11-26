@@ -14,9 +14,12 @@ import net.minecraftforge.event.entity.living.LivingAttackEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
-import org.jetbrains.annotations.Nullable;
+import net.minecraft.world.effect.MobEffect;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraftforge.event.entity.living.MobEffectEvent;
+import net.minecraftforge.eventbus.api.Event;
 
-import java.util.Comparator;
+import java.util.List;
 
 /**
  * The Ender Dragon form's passives (its active ability, the dragon fireball, lives in {@link MutationAbilities}):
@@ -24,10 +27,10 @@ import java.util.Comparator;
  *     <li>{@link MutationTrait#DRAGON_REPULSION}: like the vanilla dragon's wings, every creature touching the dragon is
  *     thrown back and takes 2 damage. Checked twice a second, which is also vanilla's hurt-immunity window, so a
  *     creature pinned against the dragon takes 2 damage every half second.</li>
- *     <li>{@link MutationTrait#CRYSTAL_HEALING}: the nearest End Crystal within 32 blocks heals the dragon 1 health every
- *     half second, exactly like the vanilla dragon. Clients draw the same crystal beam (see
- *     {@code TransformationRenderer}), choosing the crystal with {@link #findHealingCrystal}.</li>
- *     <li>Immune to its own lingering breath.</li>
+ *     <li>{@link MutationTrait#CRYSTAL_HEALING}: every End Crystal within 32 blocks heals the dragon 1 health every half
+ *     second, and the healing stacks (three crystals: 3 health every half second). Clients draw a beam from each one
+ *     (see {@code TransformationRenderer}), using the same list, {@link #findHealingCrystals}.</li>
+ *     <li>Immune to its own lingering breath, and to Blindness and Darkness.</li>
  * </ul>
  */
 @Mod.EventBusSubscriber(modid = Sanguinaire.MOD_ID)
@@ -51,8 +54,16 @@ public final class DragonForm {
             repel(player);
         }
         if (type.hasTrait(MutationTrait.CRYSTAL_HEALING) && age % CRYSTAL_HEAL_INTERVAL == 0
-                && player.getHealth() < player.getMaxHealth() && findHealingCrystal(player) != null) {
-            player.heal(1.0F);
+                && player.getHealth() < player.getMaxHealth()) {
+            int crystals = findHealingCrystals(player).size();
+            if (crystals > 0) {
+                player.heal(crystals);
+            }
+        }
+        if (type == MutationType.ENDER_DRAGON) {
+            // Effects that were already on the player when they transformed.
+            player.removeEffect(MobEffects.BLINDNESS);
+            player.removeEffect(MobEffects.DARKNESS);
         }
         if (type == MutationType.ENDER_DRAGON && age % FLAP_INTERVAL == 0 && player.getAbilities().flying && !player.isInvisible()) {
             player.level().playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.ENDER_DRAGON_FLAP,
@@ -80,13 +91,19 @@ public final class DragonForm {
         return entity instanceof TamableAnimal pet && pet.isOwnedBy(player);
     }
 
-    /** The End Crystal that heals this dragon-form player: the nearest within 32 blocks. Safe on both sides. */
-    @Nullable
-    public static EndCrystal findHealingCrystal(Player player) {
-        return player.level().getEntitiesOfClass(EndCrystal.class, player.getBoundingBox().inflate(CRYSTAL_RANGE), EndCrystal::isAlive)
-                .stream()
-                .min(Comparator.comparingDouble(crystal -> crystal.distanceToSqr(player)))
-                .orElse(null);
+    /** Every End Crystal healing this dragon-form player: all within 32 blocks. Safe on both sides. */
+    public static List<EndCrystal> findHealingCrystals(Player player) {
+        return player.level().getEntitiesOfClass(EndCrystal.class, player.getBoundingBox().inflate(CRYSTAL_RANGE), EndCrystal::isAlive);
+    }
+
+    /** The dragon's eyes cannot be clouded: Blindness and Darkness never take hold. */
+    @SubscribeEvent
+    public static void onEffectApplicable(MobEffectEvent.Applicable event) {
+        MobEffect effect = event.getEffectInstance().getEffect();
+        if ((effect == MobEffects.BLINDNESS || effect == MobEffects.DARKNESS) && event.getEntity() instanceof Player player
+                && TransformationManager.getActive(player) == MutationType.ENDER_DRAGON) {
+            event.setResult(Event.Result.DENY);
+        }
     }
 
     /** The dragon is not harmed by its own lingering breath (or anything else it caused itself). */

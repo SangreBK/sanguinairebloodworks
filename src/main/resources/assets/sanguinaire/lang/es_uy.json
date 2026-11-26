@@ -316,7 +316,7 @@
   "item.sanguinaire.burning_gland": "Glándula ardiente",
   "item.sanguinaire.end_membrane": "Membrana del End",
   "mutation.sanguinaire.ender_dragon": "Dragón del End",
-  "journal.sanguinaire.mutation.ender_dragon": "El señor del End, encogido para caber en un solo cuerpo. Vuelas sin descanso, sin tocar nunca el suelo, y el fuego no puede quemarte. Todo lo que roza tu cuerpo es apartado de un golpe por tus alas y recibe 2 de daño. Y los viejos cristales aún recuerdan a su amo: mientras un Cristal del End se alce a menos de 32 bloques, se une a ti con un haz de luz y te va cerrando las heridas.",
+  "journal.sanguinaire.mutation.ender_dragon": "El señor del End, encogido para caber en un solo cuerpo. Vuelas sin descanso, sin tocar nunca el suelo, y el fuego no puede quemarte. Ni la Ceguera ni la Oscuridad pueden nublar tus ojos. Todo lo que roza tu cuerpo es apartado de un golpe por tus alas y recibe 2 de daño. Y los viejos cristales aún recuerdan a su amo: cada Cristal del End a menos de 32 bloques se une a ti con un haz de luz y te va cerrando las heridas, y cuantos más cristales te rodeen, más rápido sanas.",
   "journal.sanguinaire.mutation.ender_dragon.ability": "Escupes una bola de aliento de dragón. Donde estalla deja una nube púrpura que se expande y daña a todo lo que hay dentro durante 30 segundos, salvo a ti. Recuperación: 8 segundos.",
   "advancements.sanguinaire.second_wind.title": "Segundo aliento",
   "advancements.sanguinaire.second_wind.description": "Inyecta un Suero revitalizante",
