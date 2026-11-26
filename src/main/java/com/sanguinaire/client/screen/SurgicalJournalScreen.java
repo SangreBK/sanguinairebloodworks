@@ -65,6 +65,8 @@ import java.util.function.Consumer;
  */
 public class SurgicalJournalScreen extends Screen {
     private static final ResourceLocation TEXTURE = Sanguinaire.id("textures/gui/surgical_journal.png");
+    /** The Decayed Anatomy status effect icon (18×18), shown on the Weakened Hearts entry. */
+    private static final ResourceLocation DECAYED_ANATOMY_ICON = Sanguinaire.id("textures/mob_effect/decayed_anatomy.png");
     private static final String PREFIX = "journal." + Sanguinaire.MOD_ID + ".";
 
     private static final int BOOK_WIDTH = 320;
@@ -104,13 +106,13 @@ public class SurgicalJournalScreen extends Screen {
      * crafting recipe (looked up by id in the client's recipe manager, so it always matches the real recipe).
      */
     private record Line(@Nullable FormattedCharSequence text, int color, @Nullable List<ItemStack> icons,
-                        @Nullable ResourceLocation recipe) {
+                        @Nullable ResourceLocation recipe, boolean decayIcon) {
         Line(@Nullable FormattedCharSequence text, int color, @Nullable List<ItemStack> icons) {
-            this(text, color, icons, null);
+            this(text, color, icons, null, false);
         }
 
         int height(int fontHeight) {
-            return recipe != null ? RECIPE_HEIGHT : icons != null ? ICON_ROW_HEIGHT : fontHeight + 1;
+            return recipe != null ? RECIPE_HEIGHT : icons != null || decayIcon ? ICON_ROW_HEIGHT : fontHeight + 1;
         }
     }
 
@@ -269,7 +271,7 @@ public class SurgicalJournalScreen extends Screen {
     private void addRecipe(List<Line> lines, String id) {
         ResourceLocation recipeId = Sanguinaire.id(id);
         if (findRecipe(recipeId) != null) {
-            lines.add(new Line(null, INK, null, recipeId));
+            lines.add(new Line(null, INK, null, recipeId, false));
         }
     }
 
@@ -373,7 +375,7 @@ public class SurgicalJournalScreen extends Screen {
 
     private void buildWeakenedHeartsEntry(List<Line> lines) {
         addTitle(lines, Component.translatable(PREFIX + "weakened.title"));
-        addSpacer(lines);
+        lines.add(new Line(null, INK, null, null, true)); // the Decayed Anatomy effect icon
         addWrapped(lines, Component.translatable(PREFIX + "weakened.intro"), INK);
         addSpacer(lines);
         addHeading(lines, "weakened.gained_heading");
@@ -567,7 +569,9 @@ public class SurgicalJournalScreen extends Screen {
         for (Line line : content) {
             int height = line.height(font.lineHeight);
             if (y + height >= top && y <= bottom) {
-                if (line.recipe() != null) {
+                if (line.decayIcon()) {
+                    renderDecayIcon(graphics, x, y);
+                } else if (line.recipe() != null) {
                     renderRecipe(graphics, line.recipe(), x, y, mouseX, mouseY, top, bottom);
                 } else if (line.icons() != null) {
                     renderIconRow(graphics, line.icons(), x, y, mouseX, mouseY, top, bottom);
@@ -648,6 +652,13 @@ public class SurgicalJournalScreen extends Screen {
         if (result.getCount() > 1) {
             graphics.renderItemDecorations(font, result, resultX + 2, resultY + 2);
         }
+    }
+
+    /** The Decayed Anatomy effect icon, centred on a slot like the item pictures. */
+    private void renderDecayIcon(GuiGraphics graphics, int x, int y) {
+        int slotX = x + (RIGHT_PAGE_WIDTH - 20) / 2;
+        graphics.blit(TEXTURE, slotX, y + 1, 0.0F, 184.0F, 20, 20, TEXTURE_WIDTH, TEXTURE_HEIGHT);
+        graphics.blit(DECAYED_ANATOMY_ICON, slotX + 1, y + 2, 0.0F, 0.0F, 18, 18, 18, 18);
     }
 
     private void renderHoverableItem(GuiGraphics graphics, ItemStack stack, int slotX, int slotY, int mouseX, int mouseY, int top, int bottom) {
