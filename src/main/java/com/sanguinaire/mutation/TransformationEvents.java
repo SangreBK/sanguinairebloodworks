@@ -74,6 +74,51 @@ import org.jetbrains.annotations.Nullable;
 /** Forge-bus hooks for transformation ticking, death handling and event-driven passive traits. */
 @Mod.EventBusSubscriber(modid = Sanguinaire.MOD_ID)
 public final class TransformationEvents {
+    /** Enderman form: dodges projectiles by blinking up to this many blocks away. */
+    private static final double ENDERMAN_DODGE_RADIUS = 4.0D;
+
+    /**
+     * Enderman form: projectiles never land. Like a real Enderman, the player blinks to a random spot within
+     * {@value #ENDERMAN_DODGE_RADIUS} blocks instead (the hit is cancelled even if no spot is found).
+     */
+    @SubscribeEvent(priority = EventPriority.HIGH)
+    public static void onEndermanDodge(LivingAttackEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer player) || TransformationManager.getActive(player) != MutationType.ENDERMAN
+                || !event.getSource().is(DamageTypeTags.IS_PROJECTILE)) {
+            return;
+        }
+        event.setCanceled(true);
+        double fromX = player.getX();
+        double fromY = player.getY();
+        double fromZ = player.getZ();
+        for (int attempt = 0; attempt < 16; attempt++) {
+            double x = fromX + (player.getRandom().nextDouble() * 2.0D - 1.0D) * ENDERMAN_DODGE_RADIUS;
+            double y = fromY + player.getRandom().nextInt(5) - 2;
+            double z = fromZ + (player.getRandom().nextDouble() * 2.0D - 1.0D) * ENDERMAN_DODGE_RADIUS;
+            if ((x - fromX) * (x - fromX) + (z - fromZ) * (z - fromZ) < 1.5D) {
+                continue; // a dodge should actually move them
+            }
+            if (player.randomTeleport(x, y, z, true)) {
+                player.level().playSound(null, fromX, fromY, fromZ, SoundEvents.ENDERMAN_TELEPORT, SoundSource.PLAYERS, 1.0F, 1.0F);
+                player.level().playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.ENDERMAN_TELEPORT,
+                        SoundSource.PLAYERS, 1.0F, 1.0F);
+                break;
+            }
+        }
+    }
+
+    /** Zombie/Husk/Drowned form: the called horde joins in on whatever the player hits. */
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    public static void onHordeCallerAttacks(LivingHurtEvent event) {
+        if (event.isCanceled() || !(event.getSource().getEntity() instanceof ServerPlayer player)) {
+            return;
+        }
+        MutationType type = TransformationManager.getActive(player);
+        if (type == MutationType.ZOMBIE || type == MutationType.HUSK || type == MutationType.DROWNED) {
+            MutationAbilities.directHorde(player, event.getEntity());
+        }
+    }
+
     /** Half a heart: what is left after a lethal blow forces a transformation to end. */
     private static final float DETRANSFORM_HEALTH = 1.0F;
     private static final double HIGH_JUMP_BONUS = 0.13D;

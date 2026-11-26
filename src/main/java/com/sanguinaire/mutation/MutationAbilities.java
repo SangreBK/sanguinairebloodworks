@@ -796,6 +796,23 @@ public final class MutationAbilities {
         }
     }
 
+    /**
+     * Whatever the horde's caller attacks, the horde attacks too (not each other, and not the caller's own followers).
+     * Called from {@link TransformationEvents} when a Zombie/Husk/Drowned-form player hurts something.
+     */
+    public static void directHorde(ServerPlayer player, LivingEntity victim) {
+        Set<UUID> followers = HORDES.get(player.getUUID());
+        if (followers == null || followers.contains(victim.getUUID()) || victim == player || !victim.isAlive()
+                || !(player.level() instanceof ServerLevel level)) {
+            return;
+        }
+        for (UUID id : followers) {
+            if (level.getEntity(id) instanceof Mob mob && mob.isAlive() && mob != victim && mob.getTarget() != victim) {
+                mob.setTarget(victim);
+            }
+        }
+    }
+
     // ---- Phantom / Goat dashes ---------------------------------------------------------------------------------
 
     /** Phantom: shrieks and swoops 8 blocks along the look direction; only while flying. */
