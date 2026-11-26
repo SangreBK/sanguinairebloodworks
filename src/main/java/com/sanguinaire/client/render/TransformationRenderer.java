@@ -113,8 +113,8 @@ public final class TransformationRenderer {
 
     /** Puppet entities, by the id of the player they stand in for. */
     private static final Map<Integer, Puppet> PUPPETS = new HashMap<>();
-    /** How far the shrunken Ender Dragon model is raised inside its hitbox. */
-    private static final float DRAGON_RENDER_LIFT = 0.35F;
+    /** How far the full-size Ender Dragon model is raised above the player's feet, so its body clears the ground. */
+    private static final float DRAGON_RENDER_LIFT = 2.0F;
     /** An ability wind-up animation playing on a player's creature model. */
     private static final class Animation {
         final int kind;
@@ -235,8 +235,7 @@ public final class TransformationRenderer {
         EntityRenderer<? super LivingEntity> renderer = Minecraft.getInstance().getEntityRenderDispatcher().getRenderer(puppet);
         float yaw = Mth.lerp(partialTick, player.yRotO, player.getYRot());
         if (puppet instanceof PuppetDragon) {
-            // The real dragon is 16 blocks long: shrink it to the form's hitbox, lifted so its belly sits on the floor
-            // of the hitbox instead of below it.
+            // Full size (MutationType.ENDER_DRAGON_SCALE), raised 2 blocks so the body and wings clear the ground.
             poseStack.pushPose();
             poseStack.translate(0.0F, DRAGON_RENDER_LIFT, 0.0F);
             poseStack.scale(MutationType.ENDER_DRAGON_SCALE, MutationType.ENDER_DRAGON_SCALE, MutationType.ENDER_DRAGON_SCALE);
@@ -250,14 +249,14 @@ public final class TransformationRenderer {
     /**
      * Ender Dragon form: the vanilla healing beam from the nearest End Crystal (vanilla draws it from the dragon to its
      * {@code nearestCrystal}; the server heals using the same choice, {@link DragonForm#findHealingCrystal}). Drawn
-     * unscaled, from the middle of the hitbox.
+     * unscaled, to the raised dragon's body.
      */
     private static void renderCrystalBeam(Player player, PoseStack poseStack, MultiBufferSource buffers, float partialTick, int light) {
         EndCrystal crystal = DragonForm.findHealingCrystal(player);
         if (crystal == null) {
             return;
         }
-        float originY = player.getBbHeight() * 0.5F;
+        float originY = DRAGON_RENDER_LIFT + 1.0F; // the dragon's body, where vanilla's beam ends
         float dx = (float) (Mth.lerp(partialTick, crystal.xo, crystal.getX()) - Mth.lerp(partialTick, player.xo, player.getX()));
         float dy = (float) (Mth.lerp(partialTick, crystal.yo, crystal.getY()) - Mth.lerp(partialTick, player.yo, player.getY()));
         float dz = (float) (Mth.lerp(partialTick, crystal.zo, crystal.getZ()) - Mth.lerp(partialTick, player.zo, player.getZ()));

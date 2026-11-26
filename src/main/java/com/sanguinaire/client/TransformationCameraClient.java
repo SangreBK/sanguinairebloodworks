@@ -40,6 +40,7 @@ public final class TransformationCameraClient {
             case GHAST -> 7.0D;
             case GOATMAN -> 5.0D;
             case ELDER_GUARDIAN -> 6.5D;
+            case ENDER_DRAGON -> 18.0D; // the full-size dragon is 16 blocks long
             default -> VANILLA_DISTANCE;
         };
     }
@@ -49,6 +50,7 @@ public final class TransformationCameraClient {
         return switch (type) {
             case GOATMAN -> 0.8D;
             case ELDER_GUARDIAN, ROTTING_ABOMINATION -> 1.0D;
+            case ENDER_DRAGON -> 4.0D;
             default -> 0.0D;
         };
     }

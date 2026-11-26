@@ -191,8 +191,11 @@ public enum MutationType {
     private static final double GOATMAN_ATTACK_SPEED = 2.0D;
     /** The vanilla Ender Dragon's head deals 10 damage. */
     private static final double ENDER_DRAGON_DAMAGE = 10.0D;
-    /** The Ender Dragon form's hitbox and how much its model is shrunk (the real dragon is 16 x 8 blocks). */
-    public static final float ENDER_DRAGON_SCALE = 0.3F;
+    /**
+     * The Ender Dragon form is drawn at the real dragon's full size (the camera pulls far back for it), but its hitbox
+     * stays small enough to move around: a 16 x 8 block hitbox could not fit anywhere.
+     */
+    public static final float ENDER_DRAGON_SCALE = 1.0F;
     private static final EntityDimensions ENDER_DRAGON_DIMENSIONS = EntityDimensions.scalable(2.5F, 1.5F);
 
     private static TransformationStats configured(SanguinaireConfig.CreatureStats config, double knockbackResistance,

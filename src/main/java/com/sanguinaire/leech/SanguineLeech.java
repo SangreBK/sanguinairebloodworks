@@ -32,7 +32,7 @@ import net.minecraft.world.phys.Vec3;
  * darkness, solid ground and night time), but water is its element: it breathes underwater, hangs in the water
  * without sinking and swims fast, much faster than it crawls (crawling is a silverfish's pace).
  * <p>
- * 8 health, 2 attack damage. Sounds are a silverfish's, pitched down.
+ * 6 health, 2 attack damage; every bite that lands heals it 2 health. Sounds are a silverfish's, pitched down.
  */
 public class SanguineLeech extends Monster {
     /** Silverfish speed on land. */
@@ -40,6 +40,7 @@ public class SanguineLeech extends Monster {
     /** Swim speed relative to the movement attribute: about 6 blocks per second, a little faster than a dolphin cruises. */
     private static final float WATER_SPEED_MODIFIER = 0.12F;
     private static final float PITCH = 0.6F;
+    private static final float BITE_HEAL = 2.0F;
 
     private final MoveControl landControl;
     private final MoveControl swimControl;
@@ -70,7 +71,7 @@ public class SanguineLeech extends Monster {
 
     public static AttributeSupplier.Builder createAttributes() {
         return Monster.createMonsterAttributes()
-                .add(Attributes.MAX_HEALTH, 8.0D)
+                .add(Attributes.MAX_HEALTH, 6.0D)
                 .add(Attributes.ATTACK_DAMAGE, 2.0D)
                 .add(Attributes.MOVEMENT_SPEED, MOVE_SPEED);
     }
@@ -109,6 +110,16 @@ public class SanguineLeech extends Monster {
         } else {
             super.travel(input);
         }
+    }
+
+    /** Each bite that lands feeds the leech. */
+    @Override
+    public boolean doHurtTarget(net.minecraft.world.entity.Entity target) {
+        boolean hit = super.doHurtTarget(target);
+        if (hit) {
+            this.heal(BITE_HEAL);
+        }
+        return hit;
     }
 
     @Override
