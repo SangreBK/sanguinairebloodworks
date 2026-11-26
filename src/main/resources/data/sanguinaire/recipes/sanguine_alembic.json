@@ -2,22 +2,19 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "pattern": [
-    " B ",
-    "ICI",
+    "III",
+    "PBP",
     "PPP"
   ],
   "key": {
-    "B": {
-      "item": "minecraft:glass_bottle"
-    },
     "I": {
-      "item": "minecraft:iron_ingot"
-    },
-    "C": {
-      "item": "minecraft:cauldron"
+      "item": "minecraft:copper_ingot"
     },
     "P": {
       "tag": "minecraft:planks"
+    },
+    "B": {
+      "item": "minecraft:cauldron"
     }
   },
   "result": {
