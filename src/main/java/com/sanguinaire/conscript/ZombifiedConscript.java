@@ -101,7 +101,7 @@ public class ZombifiedConscript extends Zombie {
         if (conscript == null) {
             return;
         }
-        conscript.setItemSlot(EquipmentSlot.MAINHAND, originalWeapon.isEmpty() ? new ItemStack(net.minecraft.world.item.Items.IRON_AXE) : originalWeapon);
+        conscript.setItemSlot(EquipmentSlot.MAINHAND, originalWeapon.isEmpty() ? ConscriptEntity.createAxe() : originalWeapon);
         conscript.addEffect(new MobEffectInstance(MobEffects.CONFUSION, 200, 0));
         conscript.setVariant(variant >= 0 ? variant : random.nextInt(ConscriptEntity.VARIANTS));
         conscript.setPotions(getPotions());

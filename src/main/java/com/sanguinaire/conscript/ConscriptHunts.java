@@ -593,6 +593,15 @@ public final class ConscriptHunts {
         }
     }
 
+    /** Conscript bolts fly straight through other Conscripts without touching them. */
+    @SubscribeEvent
+    public static void onProjectileImpact(net.minecraftforge.event.entity.ProjectileImpactEvent event) {
+        if (event.getRayTraceResult() instanceof net.minecraft.world.phys.EntityHitResult hit && hit.getEntity() instanceof ConscriptEntity
+                && event.getProjectile().getPersistentData().getBoolean(ConscriptEntity.BOLT_TAG)) {
+            event.setImpactResult(net.minecraftforge.event.entity.ProjectileImpactEvent.ImpactResult.SKIP_ENTITY); // keeps flying
+        }
+    }
+
     @SubscribeEvent
     public static void onHurt(LivingHurtEvent event) {
         // Conscript crossbow bolts always hit for a flat amount.

@@ -34,7 +34,6 @@ import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
 import net.minecraft.world.entity.ai.goal.MeleeAttackGoal;
 import net.minecraft.world.entity.ai.goal.RandomStrollGoal;
-import net.minecraft.world.entity.ai.goal.RangedCrossbowAttackGoal;
 import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
@@ -53,6 +52,8 @@ import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.entity.projectile.ThrownPotion;
 import net.minecraft.world.entity.MobType;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.item.CrossbowItem;
+import net.minecraft.world.entity.projectile.ProjectileUtil;
 import com.sanguinaire.registry.ModEntities;
 import net.minecraftforge.event.ForgeEventFactory;
 import net.minecraft.world.entity.raid.Raider;
@@ -83,7 +84,10 @@ import java.util.UUID;
  * Special actions: throws a Nullification Potion at transformed targets (can miss): at most every 15 seconds, only 3
  * per Conscript (the potions on its belt), and not within 5 seconds of a nearby comrade's throw. Flees and drinks
  * a 15-health healing potion once at half health, and drinks Fire Resistance when set on fire (60 s cooldown).
- * Carries an iron axe or a Piercing crossbow. Never carries a raid banner (killing one never gives Bad Omen).
+ * Carries a golden axe with Unbreaking III (melee) or a Piercing crossbow (ranged). Mob attacks never wear down a
+ * weapon, so the axe can't break while it fights; it drops at random durability like any mob weapon.
+ * Melee Conscripts sometimes (30% of landed hits) step back after a blow and then come in again; crossbowmen circle
+ * their target while they reload and aim, standing still only to fire. Their bolts pass through other Conscripts. Never carries a raid banner (killing one never gives Bad Omen).
  */
 public class ConscriptEntity extends AbstractIllager implements CrossbowAttackMob {
     public static final double SPOT_RANGE = 40.0D;
@@ -142,8 +146,10 @@ public class ConscriptEntity extends AbstractIllager implements CrossbowAttackMo
     private static final int DRINK_FIRE = 2;
     private static final int EAT_BREAD = 3;
 
-    private final MeleeAttackGoal meleeGoal = new MeleeAttackGoal(this, 1.0D, false);
-    private final RangedCrossbowAttackGoal<ConscriptEntity> crossbowGoal = new RangedCrossbowAttackGoal<>(this, 1.0D, 8.0F);
+    private final MeleeAttackGoal meleeGoal = new HitAndRunGoal();
+    private final Goal crossbowGoal = new SkirmishCrossbowGoal();
+    /** Chance that a landed melee hit is followed by a short retreat before re-engaging. */
+    private static final float HIT_AND_RUN_CHANCE = 0.3F;
 
     private boolean usedHealingPotion;
     private int fleeTicks;
@@ -704,12 +710,19 @@ public class ConscriptEntity extends AbstractIllager implements CrossbowAttackMo
     @Override
     protected void populateDefaultEquipmentSlots(RandomSource random, DifficultyInstance difficulty) {
         if (random.nextFloat() < 0.6F) {
-            setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.IRON_AXE));
+            setItemSlot(EquipmentSlot.MAINHAND, createAxe());
         } else {
             ItemStack crossbow = new ItemStack(Items.CROSSBOW);
             crossbow.enchant(Enchantments.PIERCING, 1 + random.nextInt(2));
             setItemSlot(EquipmentSlot.MAINHAND, crossbow);
         }
+    }
+
+    /** The melee Conscript's weapon: a golden axe with Unbreaking III. */
+    public static ItemStack createAxe() {
+        ItemStack axe = new ItemStack(Items.GOLDEN_AXE);
+        axe.enchant(Enchantments.UNBREAKING, 3);
+        return axe;
     }
 
     @Override
@@ -1118,6 +1131,186 @@ public class ConscriptEntity extends AbstractIllager implements CrossbowAttackMo
             level().broadcastEntityEvent(player, (byte) 30);
         }
         return hit;
+    }
+
+    // ---- Combat goals ----------------------------------------------------------------------------------------------
+
+    /**
+     * Melee: an ordinary melee attack, but after 30% of the hits it lands the Conscript backs off for 1.5-2.5 seconds
+     * (still watching its target) and then charges back in.
+     */
+    private class HitAndRunGoal extends MeleeAttackGoal {
+        private int retreatTicks;
+
+        HitAndRunGoal() {
+            super(ConscriptEntity.this, 1.0D, false);
+        }
+
+        @Override
+        public void start() {
+            super.start();
+            retreatTicks = 0;
+        }
+
+        @Override
+        public void tick() {
+            LivingEntity target = getTarget();
+            if (retreatTicks > 0 && target != null) {
+                retreatTicks--;
+                getLookControl().setLookAt(target, 30.0F, 30.0F);
+                if (getNavigation().isDone()) {
+                    Vec3 away = DefaultRandomPos.getPosAway(ConscriptEntity.this, 8, 4, target.position());
+                    if (away != null) {
+                        getNavigation().moveTo(away.x, away.y, away.z, 1.0D);
+                    }
+                }
+                if (retreatTicks == 0) {
+                    getNavigation().moveTo(target, 1.0D); // re-engage
+                }
+                return;
+            }
+            super.tick();
+        }
+
+        @Override
+        protected void checkAndPerformAttack(LivingEntity enemy, double distanceSq) {
+            boolean ready = isTimeToAttack();
+            super.checkAndPerformAttack(enemy, distanceSq);
+            if (ready && !isTimeToAttack() && random.nextFloat() < HIT_AND_RUN_CHANCE) {
+                retreatTicks = 30 + random.nextInt(21);
+                getNavigation().stop();
+            }
+        }
+    }
+
+    /**
+     * Ranged: circles its target (strafing sideways, keeping 6-14 blocks away, switching direction now and then) while
+     * it loads the crossbow and while it waits to take aim; it stops and stands still only for the moment of the shot.
+     * Without line of sight it walks toward the target instead.
+     */
+    private class SkirmishCrossbowGoal extends Goal {
+        private static final int UNCHARGED = 0;
+        private static final int CHARGING = 1;
+        private static final int CHARGED = 2;
+        private static final int AIMING = 3;
+        private static final double MIN_RANGE = 6.0D;
+        private static final double MAX_RANGE = 14.0D;
+        private static final int AIM_TICKS = 10;
+
+        private int state = UNCHARGED;
+        private int delay;
+        private int seeTime;
+        private boolean clockwise;
+        private int strafeTicks;
+
+        SkirmishCrossbowGoal() {
+            setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
+        }
+
+        @Override
+        public boolean canUse() {
+            LivingEntity target = getTarget();
+            return target != null && target.isAlive() && isHolding(Items.CROSSBOW);
+        }
+
+        @Override
+        public boolean canContinueToUse() {
+            return canUse();
+        }
+
+        @Override
+        public void start() {
+            setAggressive(true);
+        }
+
+        @Override
+        public void stop() {
+            setAggressive(false);
+            seeTime = 0;
+            if (isUsingItem()) {
+                stopUsingItem();
+                setChargingCrossbow(false);
+            }
+            getMoveControl().strafe(0.0F, 0.0F);
+            state = state == CHARGING ? UNCHARGED : state;
+        }
+
+        @Override
+        public boolean requiresUpdateEveryTick() {
+            return true;
+        }
+
+        @Override
+        public void tick() {
+            LivingEntity target = getTarget();
+            if (target == null) {
+                return;
+            }
+            boolean canSee = getSensing().hasLineOfSight(target);
+            seeTime = canSee ? Math.max(seeTime, 0) + 1 : Math.min(seeTime, 0) - 1;
+            double distance = Math.sqrt(distanceToSqr(target));
+            getLookControl().setLookAt(target, 30.0F, 30.0F);
+
+            if (state == AIMING) {
+                // Plant feet and fire.
+                getNavigation().stop();
+                getMoveControl().strafe(0.0F, 0.0F);
+                if (--delay <= 0 && canSee) {
+                    performRangedAttack(target, 1.0F);
+                    ItemStack crossbow = getItemInHand(ProjectileUtil.getWeaponHoldingHand(ConscriptEntity.this, item -> item instanceof CrossbowItem));
+                    CrossbowItem.setCharged(crossbow, false);
+                    state = UNCHARGED;
+                } else if (delay <= -40) {
+                    state = CHARGED; // lost sight while aiming: keep moving
+                    delay = 10;
+                }
+                return;
+            }
+
+            move(target, canSee, distance);
+
+            if (state == UNCHARGED) {
+                startUsingItem(ProjectileUtil.getWeaponHoldingHand(ConscriptEntity.this, item -> item instanceof CrossbowItem));
+                state = CHARGING;
+                setChargingCrossbow(true);
+            } else if (state == CHARGING) {
+                if (!isUsingItem()) {
+                    state = UNCHARGED;
+                } else if (getTicksUsingItem() >= CrossbowItem.getChargeDuration(getUseItem())) {
+                    releaseUsingItem();
+                    state = CHARGED;
+                    delay = 15 + random.nextInt(20);
+                    setChargingCrossbow(false);
+                }
+            } else if (state == CHARGED) {
+                if (--delay <= 0 && canSee && seeTime >= 5 && distance <= MAX_RANGE + 4.0D) {
+                    state = AIMING;
+                    delay = AIM_TICKS;
+                }
+            }
+        }
+
+        private void move(LivingEntity target, boolean canSee, double distance) {
+            if (!canSee || distance > MAX_RANGE + 4.0D) {
+                getMoveControl().strafe(0.0F, 0.0F);
+                if (getNavigation().isDone() || tickCount % 10 == 0) {
+                    getNavigation().moveTo(target, 1.0D);
+                }
+                return;
+            }
+            getNavigation().stop();
+            if (--strafeTicks <= 0) {
+                strafeTicks = 30 + random.nextInt(40);
+                if (random.nextFloat() < 0.4F) {
+                    clockwise = !clockwise;
+                }
+            }
+            if (horizontalCollision) {
+                clockwise = !clockwise; // bumped into something: go the other way round
+            }
+            float forward = distance < MIN_RANGE ? -0.5F : distance > MAX_RANGE ? 0.5F : 0.0F;
+            getMoveControl().strafe(forward, clockwise ? 0.5F : -0.5F);
+        }
     }
 
     @Override
