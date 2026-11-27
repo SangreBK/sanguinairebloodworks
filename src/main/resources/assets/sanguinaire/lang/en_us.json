@@ -172,7 +172,7 @@
   "journal.sanguinaire.serum.revitalizing": "A bright green restorative, distilled to do in a single breath what a brewer's potion does in a dozen. Injected, it floods the body with life as Instant Health II would, and like any true instant remedy it can refill even Weakened Hearts, though they remain weakened.",
   "message.sanguinaire.revitalizing": "Warmth floods through your veins.",
   "serum.sanguinaire.delayed_accretion": "Serum of Delayed Accretion",
-  "journal.sanguinaire.serum.delayed_accretion": "A cold, violet draught that teaches the flesh to put off its suffering. For 18 seconds nothing can wound you: blades, claws, arrows, fire and falls all land without a mark. But the body keeps a ledger. Every blow is counted, weighed against your armor as it would have been, and when the serum wears off (or is purged with milk) the whole debt is paid at once. Use the respite well, and make sure you can afford the bill.",
+  "journal.sanguinaire.serum.delayed_accretion": "A cold, violet draught that teaches the flesh to put off its suffering. For 18 seconds nothing can wound you: blades, claws, arrows, fire and falls all land without a mark. But the body keeps a ledger. Every blow is counted, weighed against your armor as it would have been, and when the serum wears off (or is purged with milk) the whole debt is paid at once.",
   "message.sanguinaire.delayed_accretion": "Your flesh goes numb. Every wound will wait.",
   "message.sanguinaire.delayed_accretion_ended": "The debt comes due: %s hearts of pain at once.",
   "serum.sanguinaire.leeching": "Serum of Leeching",
