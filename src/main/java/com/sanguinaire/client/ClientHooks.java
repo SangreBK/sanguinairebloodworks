@@ -21,6 +21,12 @@ public final class ClientHooks {
         return ModKeyMappings.MUTATION_ABILITY.getTranslatedKeyMessage();
     }
 
+    /** Whether the entity id belongs to the local player (the Ender Dragon form's body hitbox ignores its owner's aim). */
+    public static Boolean isLocalPlayer(int entityId) {
+        Player player = Minecraft.getInstance().player;
+        return player != null && player.getId() == entityId;
+    }
+
     /** The local player's Weakened Health (0 if there is no player yet). */
     public static Float localWeakenedHealth() {
         Player player = Minecraft.getInstance().player;

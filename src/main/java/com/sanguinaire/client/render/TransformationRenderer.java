@@ -659,7 +659,7 @@ public final class TransformationRenderer {
                 ravager.tickAnimations(player);
             }
             if (puppet instanceof PuppetDragon dragon) {
-                dragon.tickWings(moved);
+                dragon.tickDragon(player, moved);
             }
             if (puppet instanceof Phantom phantom && !player.isInvisible()) {
                 spawnPhantomWingParticles(player, phantom);
@@ -728,25 +728,55 @@ public final class TransformationRenderer {
     }
 
     /**
-     * The dragon's renderer and model read its body turn and neck/tail curve from a history of past positions that only
-     * fills while the real dragon ticks ({@code EnderDragon#getLatencyPos}). The puppet answers with the player's
-     * current heading instead (the dragon's own yaw runs 180 degrees from a normal mob's), giving a straight body that
-     * turns with the player, and beats its wings at the vanilla pace (faster while moving).
+     * The dragon's renderer and model bend its body, neck and tail from a history of its past headings and heights
+     * ({@code EnderDragon#getLatencyPos}), which only fills while the real dragon ticks. The puppet keeps the same
+     * 64-tick history itself, recorded from the player every client tick (the dragon's own yaw runs 180 degrees from a
+     * normal mob's), so the body lags behind turns and the neck and tail swing and curve like the mob's, and the body
+     * tilts when climbing or diving. It also beats its wings at the vanilla pace (faster while moving).
      */
     private static final class PuppetDragon extends EnderDragon {
+        private final double[][] history = new double[64][3];
+        private int pointer = -1;
+
         PuppetDragon(Level level) {
             super(EntityType.ENDER_DRAGON, level);
         }
 
-        void tickWings(float moved) {
+        void tickDragon(Player player, float moved) {
             oFlapTime = flapTime;
             flapTime += 0.2F / (moved * 10.0F + 1.0F) * 0.5F + (moved > 0.05F ? 0.05F : 0.0F);
+            double yaw = Mth.wrapDegrees(player.getYRot() + 180.0F);
+            double y = player.getY();
+            if (pointer < 0) {
+                for (double[] entry : history) {
+                    entry[0] = yaw;
+                    entry[1] = y;
+                }
+            }
+            if (++pointer == history.length) {
+                pointer = 0;
+            }
+            history[pointer][0] = yaw;
+            history[pointer][1] = y;
         }
 
+        /** Vanilla's interpolation over the recorded history. */
         @Override
         public double[] getLatencyPos(int bufferIndexOffset, float partialTick) {
-            float yaw = Mth.rotLerp(partialTick, this.yRotO, this.getYRot());
-            return new double[]{Mth.wrapDegrees(yaw + 180.0F), this.getY(), 0.0D};
+            if (pointer < 0) {
+                float yaw = Mth.rotLerp(partialTick, this.yRotO, this.getYRot());
+                return new double[]{Mth.wrapDegrees(yaw + 180.0F), this.getY(), 0.0D};
+            }
+            float progress = 1.0F - partialTick;
+            int i = pointer - bufferIndexOffset & 63;
+            int j = pointer - bufferIndexOffset - 1 & 63;
+            double[] result = new double[3];
+            double yaw = history[i][0];
+            result[0] = yaw + Mth.wrapDegrees(history[j][0] - yaw) * progress;
+            double height = history[i][1];
+            result[1] = height + (history[j][1] - height) * progress;
+            result[2] = Mth.lerp(progress, history[i][2], history[j][2]);
+            return result;
         }
     }
 

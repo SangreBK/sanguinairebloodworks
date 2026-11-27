@@ -51,6 +51,16 @@ public final class ModEntities {
                     .clientTrackingRange(8)
                     .build(Sanguinaire.id("sanguine_leech").toString()));
 
+    /** The Ender Dragon form's invisible body hitbox (see DragonHitbox). */
+    public static final RegistryObject<EntityType<com.sanguinaire.mutation.DragonHitbox>> DRAGON_HITBOX = ENTITY_TYPES.register("dragon_hitbox",
+            () -> EntityType.Builder.<com.sanguinaire.mutation.DragonHitbox>of(com.sanguinaire.mutation.DragonHitbox::new, MobCategory.MISC)
+                    .sized(4.0F, 2.0F)
+                    .noSummon()
+                    .fireImmune()
+                    .clientTrackingRange(10)
+                    .updateInterval(1)
+                    .build(Sanguinaire.id("dragon_hitbox").toString()));
+
     private ModEntities() {
     }
 

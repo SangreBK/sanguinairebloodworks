@@ -238,7 +238,7 @@ public enum MutationType {
             case HUSK -> EnumSet.of(MutationTrait.COUNTS_AS_MONSTER, MutationTrait.HUNGER_ON_HIT,
                     MutationTrait.ZOMBIFIES_VILLAGERS);
             case DROWNED -> EnumSet.of(MutationTrait.COUNTS_AS_MONSTER, MutationTrait.WATER_BREATHING,
-                    MutationTrait.ZOMBIFIES_VILLAGERS);
+                    MutationTrait.ZOMBIFIES_VILLAGERS, MutationTrait.BURNS_IN_SUNLIGHT);
             case SPIDER -> EnumSet.of(MutationTrait.COUNTS_AS_MONSTER, MutationTrait.WALL_CLIMBING, MutationTrait.COBWEB_WALKING);
             case VENOMOUS_SPIDER -> EnumSet.of(MutationTrait.COUNTS_AS_MONSTER, MutationTrait.WALL_CLIMBING,
                     MutationTrait.COBWEB_WALKING, MutationTrait.POISON_ON_HIT);
@@ -440,13 +440,18 @@ public enum MutationType {
 
     /**
      * Extra melee reach (vanilla is 3 blocks). The Fade Hound's long neck is a passive ({@link MutationTrait#LONG_REACH},
-     * +2.5, 5.5 in total); the Goatman simply has long arms (+0.65, 3.65 in total) and lists nothing for it.
+     * +4.5, 7.5 in total); the Goatman simply has long arms (+1.3, 4.3 in total) and the full-size Ender Dragon a long
+     * neck (+5, 8 in total); neither lists anything for it.
      */
     public double getReachBonus() {
         if (hasTrait(MutationTrait.LONG_REACH)) {
-            return 2.5D;
+            return 4.5D;
         }
-        return this == GOATMAN ? 0.65D : 0.0D;
+        return switch (this) {
+            case GOATMAN -> 1.3D;
+            case ENDER_DRAGON -> 5.0D;
+            default -> 0.0D;
+        };
     }
 
     /**

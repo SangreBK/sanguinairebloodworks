@@ -31,6 +31,8 @@ import java.util.List;
  *     second, and the healing stacks (three crystals: 3 health every half second). Clients draw a beam from each one
  *     (see {@code TransformationRenderer}), using the same list, {@link #findHealingCrystals}.</li>
  *     <li>Immune to its own lingering breath, and to Blindness and Darkness.</li>
+ *     <li>A second, invisible hitbox ({@link DragonHitbox}) around the raised body, so arrows and blows aimed at the
+ *     full-size model land.</li>
  * </ul>
  */
 @Mod.EventBusSubscriber(modid = Sanguinaire.MOD_ID)
@@ -50,6 +52,9 @@ public final class DragonForm {
     /** Server, every tick while in the Ender Dragon form. */
     static void tick(ServerPlayer player, MutationType type) {
         int age = player.tickCount;
+        if (type == MutationType.ENDER_DRAGON) {
+            ensureHitbox(player);
+        }
         if (type.hasTrait(MutationTrait.DRAGON_REPULSION) && age % REPULSION_INTERVAL == 0) {
             repel(player);
         }
@@ -68,6 +73,43 @@ public final class DragonForm {
         if (type == MutationType.ENDER_DRAGON && age % FLAP_INTERVAL == 0 && player.getAbilities().flying && !player.isInvisible()) {
             player.level().playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.ENDER_DRAGON_FLAP,
                     SoundSource.PLAYERS, 0.6F, 0.9F + player.getRandom().nextFloat() * 0.2F);
+        }
+    }
+
+    /** Each dragon-form player's body hitbox (removed entities are replaced on the next tick). */
+    private static final java.util.Map<java.util.UUID, DragonHitbox> HITBOXES = new java.util.HashMap<>();
+
+    private static void ensureHitbox(ServerPlayer player) {
+        DragonHitbox hitbox = HITBOXES.get(player.getUUID());
+        if (hitbox != null && !hitbox.isRemoved() && hitbox.level() == player.level()) {
+            return;
+        }
+        if (hitbox != null) {
+            hitbox.discard();
+        }
+        hitbox = com.sanguinaire.registry.ModEntities.DRAGON_HITBOX.get().create(player.level());
+        if (hitbox == null) {
+            return;
+        }
+        hitbox.setOwner(player);
+        player.level().addFreshEntity(hitbox);
+        HITBOXES.put(player.getUUID(), hitbox);
+    }
+
+    /** The dragon's own arrows, fireballs and other projectiles pass through its body hitbox. */
+    @SubscribeEvent
+    public static void onProjectileImpact(net.minecraftforge.event.entity.ProjectileImpactEvent event) {
+        if (event.getRayTraceResult() instanceof net.minecraft.world.phys.EntityHitResult hit && hit.getEntity() instanceof DragonHitbox hitbox
+                && hitbox.getOwner() != null && event.getProjectile().getOwner() == hitbox.getOwner()) {
+            event.setImpactResult(net.minecraftforge.event.entity.ProjectileImpactEvent.ImpactResult.SKIP_ENTITY);
+        }
+    }
+
+    @SubscribeEvent
+    public static void onLogout(net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent event) {
+        DragonHitbox hitbox = HITBOXES.remove(event.getEntity().getUUID());
+        if (hitbox != null) {
+            hitbox.discard();
         }
     }
 

@@ -63,6 +63,7 @@ public final class ClientModEvents {
         event.registerEntityRenderer(ModEntities.ZOMBIFIED_CONSCRIPT.get(), com.sanguinaire.client.render.ZombifiedConscriptRenderer::new);
         event.registerEntityRenderer(ModEntities.NULLIFICATION_POTION.get(), ThrownItemRenderer::new);
         event.registerEntityRenderer(ModEntities.SANGUINE_LEECH.get(), com.sanguinaire.client.render.SanguineLeechRenderer::new);
+        event.registerEntityRenderer(ModEntities.DRAGON_HITBOX.get(), net.minecraft.client.renderer.entity.NoopRenderer::new);
     }
 
     @SubscribeEvent
