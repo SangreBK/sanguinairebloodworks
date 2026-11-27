@@ -238,6 +238,7 @@ public final class TransformationManager {
         if (type != null && type.hasTrait(MutationTrait.FLIGHT)) {
             disableFlight(player);
         }
+        restoreOffhandBriefcase(player);
         if (player.isAlive()) {
             player.setHealth(Math.min(Math.max(data.getHealthBeforeTransformation(), 1.0F), player.getMaxHealth()));
             player.level().playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.BEACON_DEACTIVATE,
@@ -396,21 +397,53 @@ public final class TransformationManager {
             ItemStack stack = player.getItemBySlot(slot);
             if (!stack.isEmpty()) {
                 player.setItemSlot(slot, ItemStack.EMPTY);
-                stash(player, stack);
+                boolean returnToOffhand = slot == EquipmentSlot.OFFHAND
+                        && stack.getItem() instanceof com.sanguinaire.item.SerumBriefcaseItem;
+                if (returnToOffhand) {
+                    stack.getOrCreateTag().putBoolean(TAG_OFFHAND_STASH, true);
+                }
+                if (!stash(player, stack) && returnToOffhand) {
+                    stack.removeTagKey(TAG_OFFHAND_STASH); // dropped on the ground: nothing to bring back
+                }
+            }
+        }
+    }
+
+    /** Marks a Serum Briefcase taken from the offhand on transforming, so it goes back there afterwards. */
+    private static final String TAG_OFFHAND_STASH = Sanguinaire.MOD_ID + "OffhandStash";
+
+    /**
+     * Back to human: a Serum Briefcase that was in the offhand when the player transformed returns to the offhand
+     * (if it is still in their inventory and the offhand is free; otherwise it simply stays where it is).
+     */
+    private static void restoreOffhandBriefcase(ServerPlayer player) {
+        Inventory inventory = player.getInventory();
+        boolean restored = !player.isAlive();
+        for (int i = 0; i < inventory.items.size(); i++) {
+            ItemStack stack = inventory.items.get(i);
+            if (stack.isEmpty() || !stack.hasTag() || !stack.getTag().getBoolean(TAG_OFFHAND_STASH)) {
+                continue;
+            }
+            stack.removeTagKey(TAG_OFFHAND_STASH);
+            if (!restored && player.getOffhandItem().isEmpty()) {
+                inventory.items.set(i, ItemStack.EMPTY);
+                player.setItemSlot(EquipmentSlot.OFFHAND, stack);
+                restored = true;
             }
         }
     }
 
     /** Puts a stack into the first empty main-inventory slot other than the selected one, or drops it. */
-    private static void stash(ServerPlayer player, ItemStack stack) {
+    private static boolean stash(ServerPlayer player, ItemStack stack) {
         Inventory inventory = player.getInventory();
         for (int i = 0; i < inventory.items.size(); i++) {
             if (i != inventory.selected && inventory.items.get(i).isEmpty()) {
                 inventory.items.set(i, stack);
-                return;
+                return true;
             }
         }
         player.drop(stack, true, false);
+        return false;
     }
 
     // ---- Attributes ------------------------------------------------------------------------------------------
