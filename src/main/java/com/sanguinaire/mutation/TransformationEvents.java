@@ -338,7 +338,7 @@ public final class TransformationEvents {
             return;
         }
         if (TransformationManager.isNightHunting(player)) {
-            event.setDistance(Math.max(0.0F, event.getDistance() - 1.0F)); // Jump Boost I's fall allowance
+            event.setDistance(Math.max(0.0F, event.getDistance() - NIGHT_JUMP_LEVEL)); // Jump Boost's fall allowance
         }
         if (TransformationManager.hasTrait(player, MutationTrait.FALL_DAMAGE_IMMUNE)) {
             event.setDamageMultiplier(0.0F);
@@ -453,7 +453,6 @@ public final class TransformationEvents {
         }
     }
 
-    /** Night Hunter's Jump Boost I (+0.1 jump power), without a visible effect. Runs where the jump is simulated. */
     /**
      * HIGH_JUMP (Goatman): one block higher. Vanilla's jump (0.42 upward) peaks at 1.25 blocks; 0.55 peaks just over
      * 2. Runs on the client too, which is what actually moves the player.
@@ -568,10 +567,17 @@ public final class TransformationEvents {
         }
     }
 
+    /** Night Hunter's Jump Boost level (Fade Hound at night): III. */
+    private static final int NIGHT_JUMP_LEVEL = 3;
+
+    /**
+     * Night Hunter's Jump Boost III (+0.1 jump power per level, like the effect), without a visible effect. Runs
+     * where the jump is simulated; {@link #onFall} gives the matching fall allowance (1 block per level).
+     */
     @SubscribeEvent
     public static void onNightHunterJump(LivingEvent.LivingJumpEvent event) {
         if (event.getEntity() instanceof Player player && TransformationManager.isNightHunting(player)) {
-            player.setDeltaMovement(player.getDeltaMovement().add(0.0D, 0.1D, 0.0D));
+            player.setDeltaMovement(player.getDeltaMovement().add(0.0D, 0.1D * NIGHT_JUMP_LEVEL, 0.0D));
         }
     }
 

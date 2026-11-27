@@ -760,7 +760,7 @@ public final class TransformationManager {
 
     /**
      * Night Hunter: +20% movement speed (Speed I) as a hidden attribute modifier, so no effect icon breaks the
-     * immersion. The Jump Boost I half is applied on jump by {@link TransformationEvents#onJump}.
+     * immersion. The Jump Boost III half is applied on jump by {@link TransformationEvents#onJump}.
      */
     private static void tickNightHunter(ServerPlayer player, MutationType type) {
         AttributeInstance speed = player.getAttribute(Attributes.MOVEMENT_SPEED);
