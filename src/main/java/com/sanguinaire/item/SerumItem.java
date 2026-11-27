@@ -184,8 +184,26 @@ public class SerumItem extends Item {
         return facing.dot(toInjector.normalize()) <= BACK_DOT_THRESHOLD;
     }
 
+    /**
+     * Serum Gamble: injects one dose of {@code serum} into its owner, straight from their briefcase. Works on a copy,
+     * so {@code serum} itself is untouched and no syringe is handed out; the caller decides whether the dose is spent.
+     *
+     * @return whether the serum took effect (false: e.g. a transformation serum while transformed)
+     */
+    public static boolean injectFromBriefcase(ServerPlayer player, ItemStack serum) {
+        if (!(serum.getItem() instanceof SerumItem item)) {
+            return false;
+        }
+        return item.inject(player, player, serum.copyWithCount(1), false).getResult().consumesAction();
+    }
+
     /** Injects the serum in {@code stack} into {@code recipient}; {@code injector} keeps the empty syringe. */
     private InteractionResultHolder<ItemStack> inject(ServerPlayer injector, ServerPlayer recipient, ItemStack stack) {
+        return inject(injector, recipient, stack, true);
+    }
+
+    private InteractionResultHolder<ItemStack> inject(ServerPlayer injector, ServerPlayer recipient, ItemStack stack,
+                                                      boolean giveSyringe) {
         MutationType type = getMutation(stack);
         UtilitySerum utility = getUtility(stack);
         boolean self = injector == recipient;
@@ -209,6 +227,9 @@ public class SerumItem extends Item {
         // The change itself follows after a 2-second build-up.
         TransformationSequence.begin(recipient, type, blood, consumed);
         injector.awardStat(Stats.ITEM_USED.get(this));
+        if (!giveSyringe) {
+            return InteractionResultHolder.success(stack);
+        }
         ItemStack syringe = new ItemStack(ModItems.EMPTY_SYRINGE.get());
         if (self) {
             giveOutsideHotbar(injector, syringe);

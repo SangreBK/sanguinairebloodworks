@@ -25,6 +25,8 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.Enchantments;
+import com.sanguinaire.registry.ModEnchantments;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
@@ -46,7 +48,8 @@ import java.util.UUID;
  *     <li><b>Sword mode</b>: 5 attack damage at a golden sword's speed (1.6), +{@value #SWORD_REACH} attack reach,
  *     +1 damage for every point (half heart) of Weakened Hearts. No sweeping attack.</li>
  * </ul>
- * Durability 2000, repaired with gold ingots; accepts only Unbreaking, Mending and Fire Aspect.
+ * Durability 2000, repaired with gold ingots; accepts only Unbreaking, Mending, Fire Aspect and its own enchantments:
+ * Vilified Edge (sword hits poison enemies under half health) and Unshaken Gait (no knockback in cane mode).
  */
 public class VileCaneItem extends Item {
     public static final String TAG_SWORD_MODE = "SwordMode";
@@ -62,6 +65,12 @@ public class VileCaneItem extends Item {
     private static final int ENCHANTMENT_VALUE = 22;
 
     private final Multimap<Attribute, AttributeModifier> swordModifiers;
+    private static final UUID UNSHAKEN_GAIT_UUID = UUID.fromString("2c9e7a41-5d3b-4f60-8a1e-7b4c9d2e6f30");
+    private static final Multimap<Attribute, AttributeModifier> UNSHAKEN_GAIT_MODIFIERS = ImmutableMultimap.of(
+            Attributes.KNOCKBACK_RESISTANCE, new AttributeModifier(UNSHAKEN_GAIT_UUID, "Unshaken Gait", 1.0D,
+                    AttributeModifier.Operation.ADDITION));
+    /** Vilified Edge: Poison I for 5 seconds on sword hits against enemies under half health. */
+    private static final int VILIFIED_POISON_TICKS = 5 * 20;
 
     public VileCaneItem(Properties properties) {
         super(properties);
@@ -112,11 +121,23 @@ public class VileCaneItem extends Item {
 
     @Override
     public Multimap<Attribute, AttributeModifier> getAttributeModifiers(EquipmentSlot slot, ItemStack stack) {
-        return slot == EquipmentSlot.MAINHAND && isSwordMode(stack) ? swordModifiers : ImmutableMultimap.of();
+        if (slot != EquipmentSlot.MAINHAND) {
+            return ImmutableMultimap.of();
+        }
+        if (isSwordMode(stack)) {
+            return swordModifiers;
+        }
+        return EnchantmentHelper.getItemEnchantmentLevel(ModEnchantments.UNSHAKEN_GAIT.get(), stack) > 0
+                ? UNSHAKEN_GAIT_MODIFIERS : ImmutableMultimap.of();
     }
 
     @Override
     public boolean hurtEnemy(ItemStack stack, LivingEntity target, LivingEntity attacker) {
+        if (isSwordMode(stack) && target.isAlive() && target.getHealth() < target.getMaxHealth() * 0.5F
+                && EnchantmentHelper.getItemEnchantmentLevel(ModEnchantments.VILIFIED_EDGE.get(), stack) > 0) {
+            target.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.POISON,
+                    VILIFIED_POISON_TICKS, 0), attacker);
+        }
         stack.hurtAndBreak(1, attacker, entity -> entity.broadcastBreakEvent(EquipmentSlot.MAINHAND));
         return true;
     }
@@ -135,7 +156,8 @@ public class VileCaneItem extends Item {
     @Override
     public boolean canApplyAtEnchantingTable(ItemStack stack, Enchantment enchantment) {
         return enchantment == Enchantments.UNBREAKING || enchantment == Enchantments.MENDING
-                || enchantment == Enchantments.FIRE_ASPECT;
+                || enchantment == Enchantments.FIRE_ASPECT
+                || enchantment.category == com.sanguinaire.enchantment.SanguinaireEnchantment.VILE_CANE;
     }
 
     @Override

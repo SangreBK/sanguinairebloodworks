@@ -50,6 +50,11 @@ public final class ModCreativeTabs {
                 for (RegistryObject<Item> part : ModItems.BODY_PARTS) {
                     output.accept(part.get());
                 }
+                // A book of every Sanguinaire enchantment.
+                for (RegistryObject<net.minecraft.world.item.enchantment.Enchantment> enchantment : ModEnchantments.ENCHANTMENTS.getEntries()) {
+                    output.accept(net.minecraft.world.item.EnchantedBookItem.createForEnchantment(
+                            new net.minecraft.world.item.enchantment.EnchantmentInstance(enchantment.get(), enchantment.get().getMaxLevel())));
+                }
             })
             .build());
 

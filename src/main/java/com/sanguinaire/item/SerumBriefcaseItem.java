@@ -27,8 +27,18 @@ import java.util.List;
  * <p>
  * The menu is opened on the server through {@link NetworkHooks#openScreen}; the hand used is sent to the client so
  * both sides build an identical menu bound to the same inventory slot.
+ * <p>
+ * Takes only its own enchantments (table or anvil): Tough Case (+{@value #TOUGH_CASE_ARMOR} armor in the offhand),
+ * Serum Gamble and Brief Management (see {@code SanguinaireEnchantment}).
  */
 public class SerumBriefcaseItem extends Item {
+    public static final int TOUGH_CASE_ARMOR = 10;
+    private static final java.util.UUID TOUGH_CASE_UUID = java.util.UUID.fromString("8e2d4c1a-6b3f-4a7e-9d05-1f2c3b4a5d6e");
+    private static final com.google.common.collect.Multimap<net.minecraft.world.entity.ai.attributes.Attribute,
+            net.minecraft.world.entity.ai.attributes.AttributeModifier> TOUGH_CASE_MODIFIERS =
+            com.google.common.collect.ImmutableMultimap.of(net.minecraft.world.entity.ai.attributes.Attributes.ARMOR,
+                    new net.minecraft.world.entity.ai.attributes.AttributeModifier(TOUGH_CASE_UUID, "Tough Case",
+                            TOUGH_CASE_ARMOR, net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADDITION));
 
     public SerumBriefcaseItem(Properties properties) {
         super(properties);
@@ -46,6 +56,34 @@ public class SerumBriefcaseItem extends Item {
                     SoundEvents.ARMOR_EQUIP_LEATHER, SoundSource.PLAYERS, 0.8F, 0.8F);
         }
         return InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
+    }
+
+    /** Tough Case: armor while carried in the offhand (shown by vanilla as "When in Off Hand: +10 Armor"). */
+    @Override
+    public com.google.common.collect.Multimap<net.minecraft.world.entity.ai.attributes.Attribute,
+            net.minecraft.world.entity.ai.attributes.AttributeModifier> getAttributeModifiers(
+            net.minecraft.world.entity.EquipmentSlot slot, ItemStack stack) {
+        if (slot == net.minecraft.world.entity.EquipmentSlot.OFFHAND
+                && net.minecraft.world.item.enchantment.EnchantmentHelper.getItemEnchantmentLevel(
+                com.sanguinaire.registry.ModEnchantments.TOUGH_CASE.get(), stack) > 0) {
+            return TOUGH_CASE_MODIFIERS;
+        }
+        return super.getAttributeModifiers(slot, stack);
+    }
+
+    @Override
+    public boolean isEnchantable(ItemStack stack) {
+        return true;
+    }
+
+    @Override
+    public int getEnchantmentValue() {
+        return 10; // like iron
+    }
+
+    @Override
+    public boolean canApplyAtEnchantingTable(ItemStack stack, net.minecraft.world.item.enchantment.Enchantment enchantment) {
+        return enchantment.category == com.sanguinaire.enchantment.SanguinaireEnchantment.SERUM_BRIEFCASE;
     }
 
     @Override

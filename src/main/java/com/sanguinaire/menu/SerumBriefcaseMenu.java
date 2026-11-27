@@ -52,6 +52,8 @@ public class SerumBriefcaseMenu extends AbstractContainerMenu {
     /** Menu slot index of the locked slot, or -1 when it is the offhand (which this menu does not display). */
     private int lockedMenuSlot = -1;
     private final BriefcaseItemHandler handler;
+    /** How many identical serums share a slot with Brief Management. */
+    public static final int BRIEF_MANAGEMENT_STACK = 2;
 
     /** Client-side constructor, called by the menu type factory with the data written by the server. */
     public SerumBriefcaseMenu(int containerId, Inventory playerInventory, FriendlyByteBuf data) {
@@ -195,6 +197,17 @@ public class SerumBriefcaseMenu extends AbstractContainerMenu {
         @Override
         public boolean mayPlace(ItemStack stack) {
             return BriefcaseItemHandler.isStorable(stack) && super.mayPlace(stack);
+        }
+
+        /** Brief Management: identical serums stack up to 2 in a briefcase slot (taken back out one at a time). */
+        @Override
+        public int getMaxStackSize(ItemStack stack) {
+            if (stack.is(com.sanguinaire.registry.ModItems.SERUM.get())
+                    && net.minecraft.world.item.enchantment.EnchantmentHelper.getItemEnchantmentLevel(
+                    com.sanguinaire.registry.ModEnchantments.BRIEF_MANAGEMENT.get(), briefcase) > 0) {
+                return BRIEF_MANAGEMENT_STACK;
+            }
+            return super.getMaxStackSize(stack);
         }
 
         @Override
