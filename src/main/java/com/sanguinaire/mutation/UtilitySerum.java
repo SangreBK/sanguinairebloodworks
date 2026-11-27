@@ -31,7 +31,7 @@ public enum UtilitySerum {
     TAINTED_BLOOD("tainted_blood", 0x3A0A1E, ModItems.VENOM_FANG, ModItems.BOOMING_DIAPHRAGM, ModItems.SHRIVELED_HEART),
     PHYSICAL_BOOST("physical_boost", 0xE0A030, ModItems.OILY_FLESH, ModItems.TOUGH_FLESH, ModItems.VILLAGER_FLESH),
     REVITALIZING("revitalizing", 0x3FC23A, ModItems.VILLAGER_HEART, ModItems.SPIDER_GLAND, ModItems.MOUNTAIN_TALLOW),
-    DELAYED_ACCRETION("delayed_accretion", 0x5B4A8A, ModItems.INSOMNIA_EYE, ModItems.ENDER_MARROW, ModItems.CLOVEN_HOOF),
+    DELAYED_ACCRETION("delayed_accretion", 0x5B4A8A, ModItems.INSOMNIA_EYE, ModItems.END_MEMBRANE, ModItems.RESONATING_ANTLER),
     LEECHING("leeching", 0x8A1020, ModItems.LEECH_TONGUE, ModItems.SHARP_FANGS, ModItems.FOUL_STOMACH);
 
     /** Tainted Blood: extra transformation time. */
