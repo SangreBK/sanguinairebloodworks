@@ -22,6 +22,13 @@ public class ZombifiedConscriptRenderer extends MobRenderer<ZombifiedConscript, 
     }
 
     @Override
+    public void render(ZombifiedConscript entity, float entityYaw, float partialTicks, PoseStack poseStack,
+                       net.minecraft.client.renderer.MultiBufferSource buffer, int packedLight) {
+        com.sanguinaire.client.model.ConscriptModel.setPotionsShown(getModel().root(), entity.getPotions());
+        super.render(entity, entityYaw, partialTicks, poseStack, buffer, packedLight);
+    }
+
+    @Override
     protected void scale(ZombifiedConscript entity, PoseStack poseStack, float partialTick) {
         poseStack.scale(0.9375F, 0.9375F, 0.9375F); // same as every illager
     }

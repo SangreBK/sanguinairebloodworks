@@ -1,6 +1,7 @@
 package com.sanguinaire.conscript;
 
 import com.sanguinaire.Sanguinaire;
+import com.sanguinaire.network.ModNetwork;
 import com.sanguinaire.advancement.ModAdvancements;
 import com.sanguinaire.config.SanguinaireConfig;
 import com.sanguinaire.mutation.MutationType;
@@ -64,10 +65,12 @@ import java.util.Set;
  * <ul>
  *     <li><b>Hunted</b>: a player who reads a Torn Page or transforms with a serum for the first time is marked, for
  *     good ("Crimes Against Nature"). Every Conscript is hostile to them and can spot them from 40 blocks.</li>
- *     <li><b>Notoriety</b> (0 to 5, internal only, never shown to the player): +1 for every transformation and for every 5 Conscripts killed; -1 after
- *     20 minutes without either. It sets the size of hunting parties (2 to 6) and how often they come.</li>
- *     <li><b>Hunting parties</b>: about every 10 minutes (sooner at high notoriety) a warning sounds, and 10 seconds
- *     later a party arrives 30-48 blocks away, following the player's trail. They give up after 3 minutes without
+ *     <li><b>Notoriety</b> (0 to 5, never announced; the player can only see it as stars on the Journal's Notoriety
+ *     entry): +1 for every transformation and for every 5 Conscripts killed; -1 after 20 minutes without either. It
+ *     sets the size of hunting parties (2 to 6) and how often they come.</li>
+ *     <li><b>Hunting parties</b>: about every 10 minutes plus 100 seconds (sooner at high notoriety) a warning sounds,
+ *     and 10 seconds later a party arrives. Turning into a villager with a serum restarts that countdown. Ten seconds
+ *     after the warning the party arrives 30-48 blocks away, following the player's trail. They give up after 3 minutes without
  *     seeing their quarry, a new party only comes once the last one is gone, and dying resets the timer.</li>
  *     <li><b>Raids</b>: every raid wave near a hunted player is joined by Conscripts.</li>
  *     <li><b>Caravans</b>: now and then 5 Conscripts and 2 chest-carrying donkeys roam near a player. Riding off with
@@ -88,12 +91,16 @@ public final class ConscriptHunts {
     private static final String CALM = "Calm";
     private static final String PENDING = "Pending";
     private static final String KILLS = "Kills";
+    /** The notoriety the player's client was last told (-1: never). */
+    private static final String SHOWN = "ShownNotoriety";
     public static final String CARAVAN_TAG = Sanguinaire.MOD_ID + ":caravan";
 
     private static final int CALM_DECAY_TICKS = 20 * 60 * 20;
     private static final int WARNING_TICKS = 10 * 20;
     private static final int RETRY_TICKS = 60 * 20;
     private static final int KILLS_PER_STAR = 5;
+    /** Added to every interval between hunting parties. */
+    private static final int EXTRA_INTERVAL_TICKS = 100 * 20;
     private static final double RAID_RANGE = 96.0D;
 
     private static final Set<Integer> ANNOUNCED_SQUADS = new HashSet<>();
@@ -192,7 +199,7 @@ public final class ConscriptHunts {
         double base = SanguinaireConfig.HUNT_INTERVAL_MINUTES.get() * 60.0D * 20.0D;
         double notorietyFactor = 1.15D - 0.1D * getNotoriety(player);
         double jitter = 0.9D + player.getRandom().nextDouble() * 0.2D;
-        return Math.max(RETRY_TICKS, (int) (base * notorietyFactor * jitter));
+        return Math.max(RETRY_TICKS, (int) (base * notorietyFactor * jitter)) + EXTRA_INTERVAL_TICKS;
     }
 
     private static int squadSize(Player player) {
@@ -247,6 +254,7 @@ public final class ConscriptHunts {
         } else if (isHunted(player)) {
             ResearchManager.unlockNote(player, HUNT_JOURNAL_NOTE); // hunted before the journal entry existed
         }
+        syncNotoriety(player, true);
     }
 
     /** Every transformation raises notoriety. Called right after the transformation starts. */
@@ -255,9 +263,13 @@ public final class ConscriptHunts {
             return;
         }
         if (isDisguised(player)) {
-            // Becoming a villager throws them off completely: notoriety back to 0.
+            // Becoming a villager throws them off completely: notoriety back to 0, and the countdown to the next
+            // hunting party starts over (a full interval at notoriety 0), giving the player room to breathe.
             changeNotoriety(player, -MAX_NOTORIETY);
             callOffSquads(player);
+            CompoundTag tag = data(player);
+            tag.putInt(PENDING, 0);
+            tag.putInt(HUNT_TIMER, huntInterval(player));
         } else {
             changeNotoriety(player, 1);
         }
@@ -309,12 +321,23 @@ public final class ConscriptHunts {
 
     // ---- Hunting parties -----------------------------------------------------------------------------------------
 
+    /** Tells the client its notoriety when it differs from what it was last told (or always, if {@code force}). */
+    private static void syncNotoriety(ServerPlayer player, boolean force) {
+        int notoriety = getNotoriety(player);
+        CompoundTag tag = peek(player);
+        if (force || !tag.contains(SHOWN) || tag.getInt(SHOWN) != notoriety) {
+            data(player).putInt(SHOWN, notoriety);
+            ModNetwork.syncNotoriety(player, notoriety);
+        }
+    }
+
     @SubscribeEvent
     public static void onPlayerTick(TickEvent.PlayerTickEvent event) {
         if (event.phase != TickEvent.Phase.END || !(event.player instanceof ServerPlayer player) || player.tickCount % 20 != 0
                 || !isHunted(player)) {
             return;
         }
+        syncNotoriety(player, false);
         if (player.level().dimension() != Level.OVERWORLD) {
             return; // the hunt (and its timer) waits until they come back
         }

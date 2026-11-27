@@ -12,6 +12,7 @@ import com.sanguinaire.player.PlayerMutationProvider;
 import com.sanguinaire.registry.ModBlocks;
 import com.sanguinaire.registry.ModItems;
 import com.sanguinaire.research.ResearchManager;
+import com.sanguinaire.client.ClientResearchCache;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -447,6 +448,9 @@ public class SurgicalJournalScreen extends Screen {
     private void buildHuntEntry(List<Line> lines, String id, String... sections) {
         String base = "hunt." + id + ".";
         addTitle(lines, Component.translatable(PREFIX + base + "title"));
+        if (id.equals("notoriety")) {
+            addWrapped(lines, notorietyStars(ClientResearchCache.getNotoriety()), INK);
+        }
         addSpacer(lines);
         addWrapped(lines, Component.translatable(PREFIX + base + "intro"), INK);
         for (String section : sections) {
@@ -454,6 +458,15 @@ public class SurgicalJournalScreen extends Screen {
             addHeading(lines, base + section + "_heading");
             addWrapped(lines, Component.translatable(PREFIX + base + section), INK);
         }
+    }
+
+    /** The reader's own notoriety as five stars, the earned ones in gold (sent by the server, see SyncNotorietyPacket). */
+    private static Component notorietyStars(int notoriety) {
+        MutableComponent stars = Component.empty();
+        for (int i = 0; i < ConscriptHunts.MAX_NOTORIETY; i++) {
+            stars.append(Component.literal("\u2605").withStyle(i < notoriety ? ChatFormatting.GOLD : ChatFormatting.DARK_GRAY));
+        }
+        return stars;
     }
 
     private static Component mobName(EntityType<?> type) {

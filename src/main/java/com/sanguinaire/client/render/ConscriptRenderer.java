@@ -2,6 +2,7 @@ package com.sanguinaire.client.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.sanguinaire.Sanguinaire;
+import com.sanguinaire.client.model.ConscriptModel;
 import com.sanguinaire.conscript.ConscriptEntity;
 import net.minecraft.client.model.IllagerModel;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -17,7 +18,12 @@ import net.minecraft.world.entity.monster.AbstractIllager;
  * the held item (weapon, potion, bread, golden apple) is shown in hand.
  */
 public class ConscriptRenderer extends IllagerRenderer<ConscriptEntity> {
-    private static final ResourceLocation TEXTURE = Sanguinaire.id("textures/entity/conscript.png");
+    /** Nico's four looks ({@code conscript_1..4.png}); each Conscript gets one at random when it spawns. */
+    private static final ResourceLocation[] TEXTURES = {
+            Sanguinaire.id("textures/entity/conscript_1.png"),
+            Sanguinaire.id("textures/entity/conscript_2.png"),
+            Sanguinaire.id("textures/entity/conscript_3.png"),
+            Sanguinaire.id("textures/entity/conscript_4.png")};
 
     public ConscriptRenderer(EntityRendererProvider.Context context) {
         super(context, new IllagerModel<>(context.bakeLayer(ModModelLayers.CONSCRIPT)), 0.5F);
@@ -36,6 +42,13 @@ public class ConscriptRenderer extends IllagerRenderer<ConscriptEntity> {
 
     @Override
     public ResourceLocation getTextureLocation(ConscriptEntity entity) {
-        return TEXTURE;
+        return TEXTURES[Math.floorMod(entity.getVariant(), TEXTURES.length)];
+    }
+
+    @Override
+    public void render(ConscriptEntity entity, float entityYaw, float partialTicks, PoseStack poseStack, MultiBufferSource buffer,
+                       int packedLight) {
+        ConscriptModel.setPotionsShown(getModel().root(), entity.getPotions()); // used bottles vanish from the belt
+        super.render(entity, entityYaw, partialTicks, poseStack, buffer, packedLight);
     }
 }

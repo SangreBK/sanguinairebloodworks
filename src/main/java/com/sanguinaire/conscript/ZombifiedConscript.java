@@ -25,13 +25,18 @@ import net.minecraftforge.event.ForgeEventFactory;
  * hunts players and villagers, zombie damage), but never turns into a drowned.
  * <p>
  * Living Conscripts try to save it: a splash of Weakness, then a golden apple ({@link #startCuring}), after which it
- * shakes for 10 seconds and becomes a Conscript again, its old weapon back in hand.
+ * shakes for 10 seconds and becomes a Conscript again, its old weapon back in hand, wearing its old look and with the
+ * same Nullification Potions left on its belt (which shows them, like a living Conscript's).
  */
 public class ZombifiedConscript extends Zombie {
     public static final int CURE_TICKS = 10 * 20;
 
     private static final EntityDataAccessor<Boolean> CURING =
             SynchedEntityData.defineId(ZombifiedConscript.class, EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<Integer> POTIONS =
+            SynchedEntityData.defineId(ZombifiedConscript.class, EntityDataSerializers.INT);
+    /** The texture variant it had in life, restored if cured. */
+    private int variant = -1;
 
     private int cureTicks;
     /** The weapon it carried in life; it fights bare-handed now, and gets it back if cured. */
@@ -46,6 +51,17 @@ public class ZombifiedConscript extends Zombie {
     protected void defineSynchedData() {
         super.defineSynchedData();
         entityData.define(CURING, false);
+        entityData.define(POTIONS, ConscriptEntity.MAX_POTIONS);
+    }
+
+    public void setConscriptState(int variant, int potions) {
+        this.variant = variant;
+        entityData.set(POTIONS, potions);
+    }
+
+    /** Nullification Potions still on its belt. */
+    public int getPotions() {
+        return entityData.get(POTIONS);
     }
 
     public void setOriginalWeapon(ItemStack weapon) {
@@ -87,6 +103,8 @@ public class ZombifiedConscript extends Zombie {
         }
         conscript.setItemSlot(EquipmentSlot.MAINHAND, originalWeapon.isEmpty() ? new ItemStack(net.minecraft.world.item.Items.IRON_AXE) : originalWeapon);
         conscript.addEffect(new MobEffectInstance(MobEffects.CONFUSION, 200, 0));
+        conscript.setVariant(variant >= 0 ? variant : random.nextInt(ConscriptEntity.VARIANTS));
+        conscript.setPotions(getPotions());
         level.sendParticles(ParticleTypes.HAPPY_VILLAGER, conscript.getX(), conscript.getEyeY(), conscript.getZ(), 8, 0.4D, 0.4D, 0.4D, 0.0D);
         level.levelEvent(null, 1027, conscript.blockPosition(), 0); // "zombie villager converted" sound
         ForgeEventFactory.onLivingConvert(this, conscript);
@@ -140,6 +158,8 @@ public class ZombifiedConscript extends Zombie {
     public void addAdditionalSaveData(CompoundTag tag) {
         super.addAdditionalSaveData(tag);
         tag.putInt("CureTicks", isCuring() ? cureTicks : -1);
+        tag.putInt("Variant", variant);
+        tag.putInt("NullificationPotions", getPotions());
         if (!originalWeapon.isEmpty()) {
             tag.put("OriginalWeapon", originalWeapon.save(new CompoundTag()));
         }
@@ -153,5 +173,9 @@ public class ZombifiedConscript extends Zombie {
             entityData.set(CURING, true);
         }
         originalWeapon = tag.contains("OriginalWeapon") ? ItemStack.of(tag.getCompound("OriginalWeapon")) : ItemStack.EMPTY;
+        variant = tag.contains("Variant") ? tag.getInt("Variant") : -1;
+        if (tag.contains("NullificationPotions")) {
+            entityData.set(POTIONS, tag.getInt("NullificationPotions"));
+        }
     }
 }

@@ -14,6 +14,8 @@ import java.util.Set;
 public final class ClientResearchCache {
     private static final Set<ResourceLocation> RESEARCH = new LinkedHashSet<>();
     private static final Set<String> SERUMS = new LinkedHashSet<>();
+    /** The local player's Conscript notoriety (0 to 5), for the Journal's Notoriety stars. */
+    private static int notoriety;
 
     private ClientResearchCache() {
     }
@@ -28,6 +30,15 @@ public final class ClientResearchCache {
     public static void clear() {
         RESEARCH.clear();
         SERUMS.clear();
+        notoriety = 0;
+    }
+
+    public static void setNotoriety(int value) {
+        notoriety = value;
+    }
+
+    public static int getNotoriety() {
+        return notoriety;
     }
 
     public static Set<ResourceLocation> research() {

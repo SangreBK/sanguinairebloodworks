@@ -80,7 +80,8 @@ import java.util.UUID;
  * sneaking and invisibility shorten that like for any mob). Attacks nearby zombies and skeletons. Allied with every
  * illager (vanilla illager alliance) and with other Conscripts.
  * <p>
- * Special actions: throws a Nullification Potion at transformed targets every 30 seconds (can miss), flees and drinks
+ * Special actions: throws a Nullification Potion at transformed targets (can miss): at most every 15 seconds, only 3
+ * per Conscript (the potions on its belt), and not within 5 seconds of a nearby comrade's throw. Flees and drinks
  * a 15-health healing potion once at half health, and drinks Fire Resistance when set on fire (60 s cooldown).
  * Carries an iron axe or a Piercing crossbow. Never carries a raid banner (killing one never gives Bad Omen).
  */
@@ -98,7 +99,14 @@ public class ConscriptEntity extends AbstractIllager implements CrossbowAttackMo
     public static final String BOLT_TAG = Sanguinaire.MOD_ID + ":conscript_bolt";
     /** Same as a vindicator. */
     public static final double MOVE_SPEED = 0.35D;
-    private static final int NULLIFY_COOLDOWN = 30 * 20;
+    private static final int NULLIFY_COOLDOWN = 15 * 20;
+    /** Nullification Potions each Conscript carries (the three bottles on its belt). */
+    public static final int MAX_POTIONS = 3;
+    /** After a throw, comrades within {@link #SHARED_THROW_RANGE} hold their own potions this long. */
+    private static final int SHARED_THROW_DELAY = 5 * 20;
+    private static final double SHARED_THROW_RANGE = 24.0D;
+    /** Nico's four Conscript looks, chosen at random on spawn. */
+    public static final int VARIANTS = 4;
     private static final double NULLIFY_RANGE = 12.0D;
     private static final int FIRE_RES_COOLDOWN = 60 * 20;
     private static final int FIRE_RES_DURATION = 60 * 20;
@@ -121,6 +129,10 @@ public class ConscriptEntity extends AbstractIllager implements CrossbowAttackMo
             SynchedEntityData.defineId(ConscriptEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> DRINKING =
             SynchedEntityData.defineId(ConscriptEntity.class, EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<Integer> VARIANT =
+            SynchedEntityData.defineId(ConscriptEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> POTIONS =
+            SynchedEntityData.defineId(ConscriptEntity.class, EntityDataSerializers.INT);
     private static final UUID FLEE_BOOST_ID = UUID.fromString("5CD17E52-A79A-43D3-A529-90FDE04B181E");
     private static final AttributeModifier FLEE_BOOST =
             new AttributeModifier(FLEE_BOOST_ID, "Fleeing to heal", 0.5D, AttributeModifier.Operation.MULTIPLY_TOTAL);
@@ -182,6 +194,26 @@ public class ConscriptEntity extends AbstractIllager implements CrossbowAttackMo
         super.defineSynchedData();
         entityData.define(CHARGING_CROSSBOW, false);
         entityData.define(DRINKING, false);
+        entityData.define(VARIANT, 0);
+        entityData.define(POTIONS, MAX_POTIONS);
+    }
+
+    /** Which of the four textures it wears (0-3). */
+    public int getVariant() {
+        return entityData.get(VARIANT);
+    }
+
+    public void setVariant(int variant) {
+        entityData.set(VARIANT, Math.max(0, Math.min(variant, VARIANTS - 1)));
+    }
+
+    /** Nullification Potions left on its belt (0-3); the renderer hides the used bottles. */
+    public int getPotions() {
+        return entityData.get(POTIONS);
+    }
+
+    public void setPotions(int potions) {
+        entityData.set(POTIONS, Math.max(0, Math.min(potions, MAX_POTIONS)));
     }
 
     @Override
@@ -448,7 +480,7 @@ public class ConscriptEntity extends AbstractIllager implements CrossbowAttackMo
         if (!(target instanceof ServerPlayer player) || !TransformationManager.isTransformed(player)) {
             return;
         }
-        if (nullifyCooldown > 0) {
+        if (nullifyCooldown > 0 || getPotions() <= 0) {
             return;
         }
         double distanceSq = distanceToSqr(player);
@@ -470,6 +502,12 @@ public class ConscriptEntity extends AbstractIllager implements CrossbowAttackMo
                 0.8F + random.nextFloat() * 0.4F);
         level().addFreshEntity(potion);
         nullifyCooldown = NULLIFY_COOLDOWN;
+        setPotions(getPotions() - 1);
+        // Comrades hold their own potions for a moment instead of all throwing at once.
+        for (ConscriptEntity comrade : level().getEntitiesOfClass(ConscriptEntity.class, getBoundingBox().inflate(SHARED_THROW_RANGE),
+                c -> c != this && c.isAlive())) {
+            comrade.nullifyCooldown = Math.max(comrade.nullifyCooldown, SHARED_THROW_DELAY);
+        }
     }
 
     /** Called when a new target is picked up: the first potion comes after a short, random delay. */
@@ -624,6 +662,7 @@ public class ConscriptEntity extends AbstractIllager implements CrossbowAttackMo
             return false;
         }
         zombie.setOriginalWeapon(weapon);
+        zombie.setConscriptState(getVariant(), getPotions());
         serverLevel.levelEvent(null, 1026, zombie.blockPosition(), 0); // "zombie infects villager" sound
         ForgeEventFactory.onLivingConvert(this, zombie);
         return true;
@@ -681,6 +720,7 @@ public class ConscriptEntity extends AbstractIllager implements CrossbowAttackMo
         populateDefaultEquipmentSlots(random, difficulty);
         populateDefaultEquipmentEnchantments(random, difficulty);
         SpawnGroupData data = super.finalizeSpawn(level, difficulty, spawnType, groupData, tag);
+        setVariant(random.nextInt(VARIANTS));
         // Conscripts never carry a raid banner, so killing one never brings Bad Omen.
         if (getItemBySlot(EquipmentSlot.HEAD).getItem() instanceof BannerItem) {
             setItemSlot(EquipmentSlot.HEAD, ItemStack.EMPTY);
@@ -781,6 +821,8 @@ public class ConscriptEntity extends AbstractIllager implements CrossbowAttackMo
         }
         tag.putBoolean("UsedHealingPotion", usedHealingPotion);
         tag.putInt("FireResCooldown", fireResCooldown);
+        tag.putInt("Variant", getVariant());
+        tag.putInt("NullificationPotions", getPotions());
         if (huntTarget != null) {
             tag.put("HuntTarget", NbtUtils.createUUID(huntTarget));
             tag.putInt("TicksSinceSighted", ticksSinceSighted);
@@ -798,6 +840,8 @@ public class ConscriptEntity extends AbstractIllager implements CrossbowAttackMo
         super.readAdditionalSaveData(tag);
         usedHealingPotion = tag.getBoolean("UsedHealingPotion");
         fireResCooldown = tag.getInt("FireResCooldown");
+        setVariant(tag.contains("Variant") ? tag.getInt("Variant") : random.nextInt(VARIANTS)); // older Conscripts get one now
+        setPotions(tag.contains("NullificationPotions") ? tag.getInt("NullificationPotions") : MAX_POTIONS);
         setDropChance(EquipmentSlot.MAINHAND, 1.0F); // older Conscripts saved the vanilla chance
         if (getOffhandItem().is(Items.GOLDEN_APPLE)) {
             setItemSlot(EquipmentSlot.OFFHAND, ItemStack.EMPTY); // saved mid-cure

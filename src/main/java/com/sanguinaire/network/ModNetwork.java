@@ -89,6 +89,16 @@ public final class ModNetwork {
                 .decoder(EmptySwingPacket::decode)
                 .consumerMainThread(EmptySwingPacket::handle)
                 .add();
+        CHANNEL.messageBuilder(com.sanguinaire.network.packet.SyncNotorietyPacket.class, id++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(com.sanguinaire.network.packet.SyncNotorietyPacket::encode)
+                .decoder(com.sanguinaire.network.packet.SyncNotorietyPacket::decode)
+                .consumerMainThread(com.sanguinaire.network.packet.SyncNotorietyPacket::handle)
+                .add();
+    }
+
+    /** Sends a player their own Conscript notoriety (for the Journal's stars). */
+    public static void syncNotoriety(ServerPlayer player, int notoriety) {
+        CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new com.sanguinaire.network.packet.SyncNotorietyPacket(notoriety));
     }
 
     /** Sends the world's /sanguinaire rules to one player (on login). */
