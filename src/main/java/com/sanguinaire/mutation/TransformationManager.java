@@ -491,7 +491,7 @@ public final class TransformationManager {
                 type.getSpeedMultiplierBonus() != 0.0D, type.getSpeedMultiplierBonus(), AttributeModifier.Operation.MULTIPLY_TOTAL);
     }
 
-    /** Melee reach bonus of the current form (Fade Hound +1.5, Goatman +0.5), replaced whenever the amount changes. */
+    /** Melee reach bonus of the current form (Fade Hound +2.5, Goatman +0.65), replaced whenever the amount changes. */
     private static void applyReach(ServerPlayer player, double bonus) {
         AttributeInstance reach = player.getAttribute(ForgeMod.ENTITY_REACH.get());
         if (reach == null) {

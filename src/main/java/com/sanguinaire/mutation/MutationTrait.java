@@ -49,7 +49,7 @@ public enum MutationTrait {
     ARMOR_PIERCING,
     /** Jump one block higher (two blocks in all). */
     HIGH_JUMP,
-    /** Melee reach +1.5 blocks. */
+    /** Melee reach +2.5 blocks (Fade Hound). */
     LONG_REACH,
     /** Walking is as fast as a player's sprint, and sprinting faster still (+30% movement speed). */
     SWIFT,

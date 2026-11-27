@@ -48,8 +48,8 @@ public final class TransformationCameraClient {
     /** How far above the eyes the camera orbits, in blocks. */
     private static double heightFor(MutationType type) {
         return switch (type) {
-            case GOATMAN -> 0.8D;
-            case ELDER_GUARDIAN, ROTTING_ABOMINATION -> 1.0D;
+            case GOATMAN -> 1.8D;
+            case ELDER_GUARDIAN, ROTTING_ABOMINATION, FADEHOUND -> 1.0D;
             case ENDER_DRAGON -> 4.0D;
             default -> 0.0D;
         };

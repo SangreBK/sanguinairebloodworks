@@ -440,13 +440,13 @@ public enum MutationType {
 
     /**
      * Extra melee reach (vanilla is 3 blocks). The Fade Hound's long neck is a passive ({@link MutationTrait#LONG_REACH},
-     * +1.5); the Goatman simply has long arms (+0.5, 3.5 in total) and lists nothing for it.
+     * +2.5, 5.5 in total); the Goatman simply has long arms (+0.65, 3.65 in total) and lists nothing for it.
      */
     public double getReachBonus() {
         if (hasTrait(MutationTrait.LONG_REACH)) {
-            return 1.5D;
+            return 2.5D;
         }
-        return this == GOATMAN ? 0.5D : 0.0D;
+        return this == GOATMAN ? 0.65D : 0.0D;
     }
 
     /**
