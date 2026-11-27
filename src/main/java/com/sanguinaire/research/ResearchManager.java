@@ -167,13 +167,24 @@ public final class ResearchManager {
                 count++;
             }
         }
+        // The Hunt journal category (normally unlocked by becoming hunted by the Conscripts).
+        if (saved.unlockSerum(player.getUUID(), com.sanguinaire.conscript.ConscriptHunts.HUNT_JOURNAL_NOTE)) {
+            count++;
+        }
         ModNetwork.syncResearch(player);
         return count;
     }
 
-    /** Forgets all of this player's research and Torn Page entries (debug command). Server only. */
+    /**
+     * Forgets all of this player's research and Torn Page entries (debug command). Server only. The Hunt category is
+     * not research: it stays for as long as the player is hunted by the Conscripts.
+     */
     public static void revokeAll(ServerPlayer player) {
-        ResearchSavedData.get(player.server).clear(player.getUUID());
+        ResearchSavedData saved = ResearchSavedData.get(player.server);
+        saved.clear(player.getUUID());
+        if (com.sanguinaire.conscript.ConscriptHunts.isHunted(player)) {
+            saved.unlockSerum(player.getUUID(), com.sanguinaire.conscript.ConscriptHunts.HUNT_JOURNAL_NOTE);
+        }
         ModNetwork.syncResearch(player);
     }
 
